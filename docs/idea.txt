@@ -1,0 +1,300 @@
+Pain point:
+
+West parents have a baked-in belief that ‘Asian kids are just better at math’—PISA 2022 ranks Asian Countries First 5, U.S. #28; every major newspaper headline repeats the gap. The same parents already spend $2 000–$3 000 a year on Kumon or Russian Math, yet 62 % see <20 % score improvement after six months (NCES 2023).  They feel the drain comes from:
+
+
+Project Idea: 
+
+Our project is to build a web app that shares the “Asian Way” daily drills that made us good at math (refer to PISA, all top 6 good at math are in Asia) . We will share all the practice we did and make it fun and easy to track.  The app will turn these “boring” repetitions into short, colorful challenges with a world leaderboard so kids everywhere can race against our best times and see their own progress.
+
+
+
+Functions : 
+Login: (google)
+SiteMap:
+page 1: Main page
+Introduction to website (Project idea), target market. 
+“How to use this website” tutorial
+About Us
+
+page 2: Lessons
+Lessons you can use 
+show all lessons for the user in boxes.. 
+-displays as island, can see island finished before and now doing
+-Other island are locked,black
+
+What you are gonna learn next lesson
+	(it needs to get enough points or measure to unlock the next lesson. 
+
+Island separates into different levels:
+-two levels in a pair
+-Last two level is boss
+-First boss is harder calculations of that level
+-Boss 2 is mixed calculations of everything learned in this island
+-Only boss counts in leaderboard
+
+Judgement:
+total 5-20 question:
+*if question is wrong +5seconds
+*Judge in time taken
+
+Lessons Lists:
+1.Bodmas
+Explain: practice how to calculate to 10 .. 8+2 7+3 etc.. 
+How to Play : left shows a number, right shows 1 to 10, and the user needs to click right to make it 10measure with speed. 
+
+1 level:Addition 
+1-2digit
+20 q
+2 level:Addition 
+2-3digit
+20 q
+
+3 level:Subtraction
+	1-2digit
+no negative number
+20q
+
+4 level:Subtraction
+	2-3digit
+no negative number
+20 q
+
+5 level:Multiplication
+	1digit
+10 q
+6 levell: division
+	1 digit
+10 q
+7 level:divi
+	2 digit
+10q
+no neg
+
+Boss 1 level: Mixed
+	Multi and divi 2 digit
+	other 2-3 digit
+ 20 questions. 
+
+2. Grid Method
+
+explain:practice how to do multiplication fast
+how to play:Left shows two numbers,type in answer measure with speed and accuracy
+1 level:
+	1 digit
+20 q
+2 level: 
+2 digits
+10 q
+
+3 level:	
+2digit
+20q
+
+Boss 1 level: Mixed
+	Multi  2 digit
+ 20 questions. 
+
+
+
+3.Fraction calculation
+explain:practice how to do fraction (mixed)
+how to play:Left shows two fractions,select answer out of four choices,
+1 level:Addition 
+1digit
+20 q
+2 level:Addition 
+1-2digit
+20 q
+
+3 level:Subtraction
+	1digit
+no negative number
+20q
+
+4 level:Subtraction
+	1-2digit
+no negative number
+20 q
+
+5 level:Multiplication
+	1digit
+10 q
+6 level:Multiplication
+	1-2digit
+10 q
+7 levell: division
+	1 digit
+10 q
+8 level:divi
+	1-2 digit
+10q
+no neg
+
+Boss 1 level: Mixed
+	Multi and divi 2 digit
+	other 2-3 digit
+ 20 questions. 
+
+
+4. Decimal Learning methods
+explain: Do addition + sub + Multi + Divi  + mixed operation.
+How to play:
+top show question + time bar down have select answer out of four choices,measure in speed and accuracy. 
+1 level:Addition 
+1 decimal digit
+20 q
+2 level:Addition 
+1-2 decimal digit
+20 q
+
+3 level:Subtraction
+	1 decimal digit
+no negative number
+20q
+
+4 level:Subtraction
+	1-2 decimal digit
+no negative number
+20 q
+
+5 level:Multiplication
+	1 decimal digit
+10 q
+6 levell: division
+	1 decimal digit
+10 q
+
+Boss 1 level: Mixed
+	Multi and divi 1 digit
+	other 1-2 digit
+ 20 questions. 
+
+
+5.Percentage basic calculation:
+explain:practice how to do percentage (mixed)
+how to play:Left shows two percentages,select answer out of four choices,measure in speed and accuracy.
+1 level:Addition 
+1digit
+20 q
+2 level:Addition 
+1-2digit
+20 q
+
+3 level:Subtraction
+	1digit
+no negative number
+20q
+
+4 level:Subtraction
+	1-2digit
+no negative number
+20 q
+
+5 level:Multiplication
+	1digit
+10 q
+6 levell: division
+	1 digit
+no neg
+
+Boss 1 level: Mixed
+	Multi and divi 1 digit
+	other 1-2 digit
+ 20 questions. 
+
+
+
+
+
+
+6.  Algebra Calculation
+ explain: practice algebra calculation      
+ 
+
+how to play:Left shows one algebra,one number,using bodmas calculations,select answer out of four choices, of what the algebra is equal to.
+1 level:Addition 
+1 algebra, 1 number
+10 q
+2 level:Addition 
+1 algebra, 2 number
+10 q
+
+3 level:Subtraction
+	1 algebra, 1 number
+10q
+no negative number
+
+4 level:Subtraction
+1 algebra, 2 number
+
+	no negative number
+10q
+
+5 level:Multiplication
+	1 algebra, 1 number
+10 q
+6 levell: division
+	1 algebra, 1 number
+no neg
+
+Boss 1 level: Mixed
+	Multi and divi 1 algebra,1 number
+	other 1 algebra, 2 number 
+ 20 questions. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Competition:
+
+quiz:
+
+
+
+
+
+page 3: Leaderboard
+
+on each Leassons 
+Just show who is the best, from what country, and user’s name and age(now) and achieve date, score .. . .. 
+(so that people can see if which country will be on lead on each lesson) 
+
+
+
+page 4:Profile/Progress chart
+
+-Name, Country, date of birth (get age),  avatar  , (edit profile) 
+- Progress on each lesson (Chart) , can see the improvement .. 
+
+Others: 
+Register page
+Name, Country, DOB. Avatar . 
+
+**** anyone can play and it is totally free. ****
+
+
+
+TechStack
+
+WebAPP. 
+
+frontend : Nextjs, Shadcn, 
+
+mainly responsive for mobile and ipad. works with all devices. 
+
+backend: Supabase (using for middlelayer , Auth and Database) 
+
+Host: Vercel 
+
+

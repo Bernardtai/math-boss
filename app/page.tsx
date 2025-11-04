@@ -50,11 +50,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 pt-16">
-      {/* Page indicator */}
-      <div className="fixed top-20 left-4 z-40 bg-blue-500/10 text-blue-700 px-3 py-1 rounded-full text-xs font-medium">
-        🏠 Home Page - Welcome Landing
-      </div>
+    <div className="min-h-screen bg-background pt-20">
       {/* Hero Section */}
       <section className="relative py-20 sm:py-24 lg:py-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

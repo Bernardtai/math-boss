@@ -8,12 +8,7 @@ import { Trophy, Target, Clock, TrendingUp, Star, Award, Calendar, MapPin, Edit,
 
 export default function ProfilePage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-900 to-pink-900 pt-20">
-      {/* Page indicator */}
-      <div className="fixed top-20 left-4 z-40 bg-pink-500/20 text-pink-100 px-3 py-1 rounded-full text-xs font-medium border border-pink-400/30">
-        🚀 Command Center - Personal Hub
-      </div>
-
+    <div className="min-h-screen bg-background pt-20">
       {/* Futuristic background effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-10 right-10 w-64 h-64 bg-cyan-400/5 rounded-full blur-3xl animate-pulse"></div>

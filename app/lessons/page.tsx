@@ -6,12 +6,7 @@ import { BookOpen, Lock, Star, Play, Target, Map, Compass, Sword, Shield } from 
 
 export default function LessonsPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-900 via-teal-800 to-cyan-900 pt-20">
-      {/* Page indicator */}
-      <div className="fixed top-20 left-4 z-40 bg-emerald-500/20 text-emerald-100 px-3 py-1 rounded-full text-xs font-medium border border-emerald-400/30">
-        🗺️ Island Explorer - Game World
-      </div>
-
+    <div className="min-h-screen bg-background pt-20">
       {/* Game-like header */}
       <div className="container mx-auto px-4 py-8">
         <div className="text-center mb-8">

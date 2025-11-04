@@ -6,12 +6,7 @@ import { Trophy, Medal, Award, Crown, Star, Globe, Users, Flame, Zap, Target } f
 
 export default function LeaderboardPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 pt-20">
-      {/* Page indicator */}
-      <div className="fixed top-20 left-4 z-40 bg-purple-500/20 text-purple-100 px-3 py-1 rounded-full text-xs font-medium border border-purple-400/30">
-        🏆 Championship Arena - Battle Rankings
-      </div>
-
+    <div className="min-h-screen bg-background pt-20">
       {/* Epic background effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 w-32 h-32 bg-yellow-400/10 rounded-full blur-3xl"></div>

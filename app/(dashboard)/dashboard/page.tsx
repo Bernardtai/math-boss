@@ -7,11 +7,7 @@ import { Trophy, Target, Clock, TrendingUp, Star, Award } from 'lucide-react'
 export default function DashboardPage() {
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-gradient-to-br from-sky-50 to-blue-50">
-        {/* Page indicator */}
-        <div className="fixed top-20 left-4 z-40 bg-sky-500/10 text-sky-700 px-3 py-1 rounded-full text-xs font-medium">
-          📊 Dashboard Page
-        </div>
+      <div className="min-h-screen bg-background pt-20">
         <div className="container mx-auto px-4 py-8">
           {/* Welcome Section */}
           <div className="mb-8">

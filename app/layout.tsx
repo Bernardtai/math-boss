@@ -1,11 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
-import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import { UserMenu } from "@/components/auth/UserMenu";
-import { LoginButton } from "@/components/auth/LoginButton";
-import { GlobalNavigation, MobileNavigation } from "@/components/ui/GlobalNavigation";
+import { Header } from "@/components/layout/Header";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -21,6 +17,13 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Math Boss - Master Math with the Asian Method",
   description: "Gamified math learning platform using proven Asian teaching methods. Master addition, subtraction, multiplication, and division through interactive lessons and challenges.",
+  keywords: "math learning, education, gamified learning, mathematics, Asian method",
+  authors: [{ name: "Math Boss" }],
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 5,
+  },
 };
 
 export default function RootLayout({
@@ -37,24 +40,10 @@ export default function RootLayout({
           defaultTheme="system"
           storageKey="math-boss-theme"
         >
-          <header className="bg-background/95 backdrop-blur-sm border-b border-border fixed top-0 left-0 right-0 z-50">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex justify-between items-center h-16">
-                <div className="flex items-center">
-                  <Link href="/" className="text-xl font-bold text-foreground hover:text-primary transition-colors">
-                    Math Boss
-                  </Link>
-                  <GlobalNavigation />
-                </div>
-                <div className="flex items-center gap-4">
-                  <ThemeToggle />
-                  <UserMenu />
-                </div>
-              </div>
-            </div>
-            <MobileNavigation />
-          </header>
-          {children}
+          <Header />
+          <main className="min-h-screen">
+            {children}
+          </main>
         </ThemeProvider>
       </body>
     </html>

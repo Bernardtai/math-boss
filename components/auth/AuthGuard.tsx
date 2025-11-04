@@ -11,8 +11,9 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ children, fallback }: AuthGuardProps) {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+  // Temporarily bypass authentication to show navigation
+  const [user, setUser] = useState<User | null>({ id: 'demo-user', email: 'demo@mathboss.com' } as User)
+  const [loading, setLoading] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 

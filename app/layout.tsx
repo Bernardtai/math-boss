@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { UserMenu } from "@/components/auth/UserMenu";
+import { LoginButton } from "@/components/auth/LoginButton";
+import { GlobalNavigation, MobileNavigation } from "@/components/ui/GlobalNavigation";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -24,21 +29,33 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <header className="bg-white shadow-sm border-b">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div className="flex items-center">
-                <h1 className="text-xl font-bold text-gray-900">Math Boss</h1>
+        <ThemeProvider
+          defaultTheme="system"
+          storageKey="math-boss-theme"
+        >
+          <header className="bg-background/95 backdrop-blur-sm border-b border-border fixed top-0 left-0 right-0 z-50">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex justify-between items-center h-16">
+                <div className="flex items-center">
+                  <Link href="/" className="text-xl font-bold text-foreground hover:text-primary transition-colors">
+                    Math Boss
+                  </Link>
+                  <GlobalNavigation />
+                </div>
+                <div className="flex items-center gap-4">
+                  <ThemeToggle />
+                  <UserMenu />
+                </div>
               </div>
-              <UserMenu />
             </div>
-          </div>
-        </header>
-        {children}
+            <MobileNavigation />
+          </header>
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

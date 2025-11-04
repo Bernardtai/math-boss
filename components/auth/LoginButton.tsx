@@ -1,36 +1,23 @@
 'use client'
 
-import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+// Temporarily disabled Supabase authentication for UI/UX development
+// import { useState } from 'react'
+// import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 
 export function LoginButton() {
-  const [loading, setLoading] = useState(false)
-  const supabase = createClient()
-
-  const handleLogin = async () => {
-    try {
-      setLoading(true)
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      })
-
-      if (error) {
-        console.error('Login error:', error.message)
-      }
-    } catch (error) {
-      console.error('Unexpected error:', error)
-    } finally {
-      setLoading(false)
-    }
+  // Mock login for UI/UX development
+  const handleLogin = () => {
+    console.log('Mock login clicked - authentication disabled for UI/UX development')
+    // Simulate loading state for UI testing
+    setTimeout(() => {
+      window.location.href = '/dashboard'
+    }, 1000)
   }
 
   return (
-    <Button onClick={handleLogin} disabled={loading}>
-      {loading ? 'Signing in...' : 'Sign in with Google'}
+    <Button onClick={handleLogin} className="w-full">
+      🎨 Mock Login (UI Testing)
     </Button>
   )
 }

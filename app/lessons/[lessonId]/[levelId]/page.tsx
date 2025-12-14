@@ -183,11 +183,11 @@ export default function LevelPage() {
               // Try with a simple insert to see if it's a constraint issue
               console.log(`🔄 Trying alternative insert approach...`)
               const altResult = await supabase
-                .from('user_unlocks')
-                .insert({
-                  user_id: userId,
+          .from('user_unlocks')
+          .insert({
+            user_id: userId,
                   level_id: nextLevel.id,
-                })
+          })
                 .select()
 
               console.log(`🔄 Alternative insert result:`, altResult)

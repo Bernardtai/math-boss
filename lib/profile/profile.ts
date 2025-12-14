@@ -99,11 +99,11 @@ export async function getOrCreateProfile(
     }
     
     console.error('Error creating profile:', {
-      message: createError.message,
-      code: createError.code,
-      details: createError.details,
-      hint: createError.hint,
-      error: createError,
+      message: createError?.message || 'Unknown error',
+      code: createError?.code || 'Unknown code',
+      details: createError?.details || 'No details',
+      hint: createError?.hint || 'No hint',
+      fullError: createError || 'No error object',
     })
     
     // If it's a unique constraint violation, try to fetch again

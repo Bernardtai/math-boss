@@ -86,6 +86,15 @@ export default function LevelPage() {
     const passed = checkPassFail(finalState, isBossLevel)
     const score = calculateScore(finalState, isBossLevel)
 
+    console.log(`Level completion check for ${level.name}:`, {
+      isBossLevel,
+      correctAnswers: finalState.correctAnswers,
+      wrongAnswers: finalState.wrongAnswers,
+      totalQuestions: finalState.questions.length,
+      passed,
+      score
+    })
+
     // Save progress
     try {
       const supabase = createClient()
@@ -103,20 +112,29 @@ export default function LevelPage() {
 
       // If passed, unlock next level or next lesson
       if (passed) {
+        console.log(`🎯 Level passed! Starting unlock process for level: ${level.name}`)
         try {
           // Get all levels in this lesson to find the next level
           const allLevels = await getLevelsByLessonClient(lessonId)
+          console.log(`📋 Found ${allLevels.length} levels in lesson ${lessonId}`)
           const nextLevel = getNextLevel(level.id, allLevels)
+          console.log(`🎯 Next level in same lesson:`, nextLevel)
 
           if (nextLevel) {
             // Unlock next level in same lesson
-            await supabase
+            console.log(`🔓 Attempting to unlock level: ${nextLevel.id} (${nextLevel.name})`)
+            const unlockResult = await supabase
               .from('user_unlocks')
               .insert({
                 user_id: userId,
                 level_id: nextLevel.id,
               })
-            console.log(`✅ Unlocked next level: ${nextLevel.name}`)
+            console.log(`🔓 Unlock result:`, unlockResult)
+            if (unlockResult.error) {
+              console.error(`❌ Failed to unlock level ${nextLevel.name}:`, unlockResult.error)
+            } else {
+              console.log(`✅ Successfully unlocked next level: ${nextLevel.name}`)
+            }
           } else {
             // No more levels in this lesson - check if lesson is completed
             const userProgress = await getUserProgressClient(userId)
@@ -125,11 +143,13 @@ export default function LevelPage() {
               passed: passed
             })
 
-            console.log(`Lesson ${lessonId} completion check:`, {
+            console.log(`📚 Lesson ${lessonId} completion check:`, {
               lessonCompleted,
               currentLevelPassed: passed,
               totalLevelsInLesson: allLevels.length,
-              userProgressCount: userProgress.filter(p => allLevels.some(l => l.id === p.level_id)).length
+              userProgressCount: userProgress.filter(p => allLevels.some(l => l.id === p.level_id)).length,
+              allLevelsDetails: allLevels.map(l => ({ id: l.id, name: l.name, order: l.order_index })),
+              userProgressDetails: userProgress.filter(p => allLevels.some(l => l.id === p.level_id)).map(p => ({ levelId: p.level_id, passed: p.passed }))
             })
 
             if (lessonCompleted) {
@@ -147,13 +167,19 @@ export default function LevelPage() {
                 console.log(`First level of next lesson ${nextLesson.id}:`, firstLevelOfNextLesson)
 
                 if (firstLevelOfNextLesson) {
-                  await supabase
+                  console.log(`🎉 Attempting to unlock first level of next lesson: ${firstLevelOfNextLesson.id} (${firstLevelOfNextLesson.name})`)
+                  const lessonUnlockResult = await supabase
                     .from('user_unlocks')
                     .insert({
                       user_id: userId,
                       level_id: firstLevelOfNextLesson.id,
                     })
-                  console.log(`✅ Completed lesson and unlocked first level of next lesson: ${firstLevelOfNextLesson.name}`)
+                  console.log(`🎉 Lesson unlock result:`, lessonUnlockResult)
+                  if (lessonUnlockResult.error) {
+                    console.error(`❌ Failed to unlock next lesson level:`, lessonUnlockResult.error)
+                  } else {
+                    console.log(`✅ Completed lesson and unlocked first level of next lesson: ${firstLevelOfNextLesson.name}`)
+                  }
                 } else {
                   console.log('❌ No first level found for next lesson')
                 }

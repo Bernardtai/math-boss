@@ -164,7 +164,6 @@ export default function LevelPage() {
               console.log('❌ Lesson not yet completed - more levels to finish')
             }
           }
-          }
         } catch (unlockError) {
           // Ignore duplicate key errors (level already unlocked)
           if ((unlockError as any)?.code !== '23505') {

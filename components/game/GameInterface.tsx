@@ -98,13 +98,17 @@ export function GameInterface({ questions, levelId, isBossLevel, onComplete }: G
 
       if (isLastQuestion) {
         // Mark as completed
-        const completedState = { ...newState, isCompleted: true }
+        const completedState = { ...newState, isCompleted: true, currentQuestionIndex: displayedQuestionIndex }
         setGameState(completedState)
         onComplete(completedState)
       } else {
         // Advance to next question
         const nextIndex = displayedQuestionIndex + 1
         setDisplayedQuestionIndex(nextIndex)
+
+        // Update game state with new question index for progress tracking
+        const updatedState = { ...newState, currentQuestionIndex: nextIndex }
+        setGameState(updatedState)
 
         // Reset for next question
         setSelectedAnswer(null)

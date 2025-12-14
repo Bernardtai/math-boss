@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Lesson, Level, UserProgress, UserUnlock } from '@/lib/db/queries'
+import { Lesson, Level, UserProgress, UserUnlock } from '@/lib/db/types'
 import { LevelGrid } from '@/components/lessons/LevelGrid'
 import { AuthGuard } from '@/components/auth/AuthGuard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'

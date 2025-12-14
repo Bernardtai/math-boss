@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
-import { Level, getLevelById } from '@/lib/db/queries'
+import { Level } from '@/lib/db/types'
+import { getLevelByIdClient } from '@/lib/db/queries.client'
 import { Question } from '@/lib/math-engine/types'
 import { GameState, createInitialGameState } from '@/lib/game/game-state'
 import { checkPassFail, calculateScore } from '@/lib/game/game-logic'
@@ -40,7 +41,7 @@ export default function LevelPage() {
       setUserId(user.id)
 
       // Get level data
-      const levelData = await getLevelById(levelId)
+      const levelData = await getLevelByIdClient(levelId)
       if (!levelData) {
         redirect('/lessons')
         return
@@ -151,85 +152,6 @@ export default function LevelPage() {
         )}
       </div>
     </AuthGuard>
-  )
-}
-  const [gameState, setGameState] = useState<GameState | null>(null)
-  const [isCompleted, setIsCompleted] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    const initialState = createInitialGameState(level.id, questions)
-    setGameState(initialState)
-    setIsLoading(false)
-  }, [level.id, questions])
-
-  const handleGameComplete = async (finalState: GameState) => {
-    setGameState(finalState)
-    setIsCompleted(true)
-
-    // Calculate results
-    const passed = checkPassFail(finalState, isBossLevel)
-    const score = calculateScore(finalState, isBossLevel)
-
-    // Save progress
-    try {
-      const supabase = createClient()
-      await supabase.from('user_progress').upsert({
-        user_id: userId,
-        level_id: level.id,
-        score,
-        time_taken: finalState.timer,
-        questions_answered: finalState.questions.length,
-        questions_correct: finalState.correctAnswers,
-        questions_wrong: finalState.wrongAnswers,
-        passed,
-        is_boss_level: isBossLevel,
-      })
-
-      // If passed, unlock next level
-      if (passed) {
-        // Get next level (this is simplified - in production, you'd query for the next level)
-        // For now, we'll just mark this level as completed
-        await supabase.from('user_unlocks').insert({
-          user_id: userId,
-          level_id: level.id,
-        }).catch(() => {
-          // Ignore duplicate key errors
-        })
-      }
-    } catch (error) {
-      console.error('Error saving progress:', error)
-    }
-  }
-
-  if (isLoading || !gameState) {
-    return <div>Loading...</div>
-  }
-
-  if (isCompleted) {
-    return (
-      <GradeReflection
-        gameState={gameState}
-        isBossLevel={isBossLevel}
-        levelId={level.id}
-        lessonId={lessonId}
-      />
-    )
-  }
-
-  return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">{level.name}</h1>
-        <p className="text-muted-foreground">{level.description}</p>
-      </div>
-      <GameInterface
-        questions={questions}
-        levelId={level.id}
-        isBossLevel={isBossLevel}
-        onComplete={handleGameComplete}
-      />
-    </div>
   )
 }
 

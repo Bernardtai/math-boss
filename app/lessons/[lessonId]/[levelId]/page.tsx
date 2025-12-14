@@ -98,13 +98,13 @@ export default function LevelPage() {
       lessonId
     })
 
-    // Check authentication status
-    const { data: authData, error: authError } = await supabase.auth.getUser()
-    console.log(`🔐 Auth check:`, { authData, authError, userId })
-
     // Save progress
     try {
       const supabase = createClient()
+
+      // Check authentication status
+      const { data: authData, error: authError } = await supabase.auth.getUser()
+      console.log(`🔐 Auth check:`, { authData, authError, userId })
       await supabase.from('user_progress').upsert({
         user_id: userId,
         level_id: level.id,

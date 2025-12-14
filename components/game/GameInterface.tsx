@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { QuestionDisplay } from './QuestionDisplay'
 import { MultipleChoiceOptions } from './MultipleChoiceOptions'
 import { Timer } from './Timer'
@@ -45,9 +45,9 @@ export function GameInterface({ questions, levelId, isBossLevel, onComplete }: G
   const progress = getProgress(gameState)
 
   // Handle timer updates
-  const handleTimeUpdate = (time: number) => {
+  const handleTimeUpdate = useCallback((time: number) => {
     setGameState((prev) => updateTimer(prev, time))
-  }
+  }, [])
 
   // Handle game start
   const handleStart = () => {

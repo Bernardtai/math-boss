@@ -87,6 +87,43 @@ export function getNextLevel(
 }
 
 /**
+ * Get the next lesson to unlock after completing a lesson
+ */
+export function getNextLesson(
+  completedLessonId: string,
+  allLessons: { id: string; order_index: number }[]
+): { id: string; order_index: number } | null {
+  const completedLesson = allLessons.find((l) => l.id === completedLessonId)
+  if (!completedLesson) {
+    return null
+  }
+
+  // Find next lesson by order_index
+  const nextLesson = allLessons.find(
+    (l) => l.order_index === completedLesson.order_index + 1
+  )
+
+  return nextLesson || null
+}
+
+/**
+ * Check if all levels in a lesson are completed
+ */
+export function isLessonCompleted(
+  lessonId: string,
+  userProgress: UserProgress[],
+  allLevels: Level[]
+): boolean {
+  const lessonLevels = allLevels.filter((level) => level.lesson_id === lessonId)
+
+  // Check if user has passed all levels in this lesson
+  return lessonLevels.every((level) => {
+    const progress = userProgress.find((p) => p.level_id === level.id)
+    return progress?.passed ?? false
+  })
+}
+
+/**
  * Check if user can access a level (unlocked and not locked by prerequisites)
  */
 export function canAccessLevel(

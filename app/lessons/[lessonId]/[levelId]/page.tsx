@@ -13,8 +13,8 @@ import { GradeReflection } from '@/components/game/GradeReflection'
 import { createClient } from '@/lib/supabase/client'
 import { AuthGuard } from '@/components/auth/AuthGuard'
 import { redirect } from 'next/navigation'
-import { getNextLevel } from '@/lib/lessons/unlock-logic'
-import { getLevelsByLessonClient } from '@/lib/db/queries.client'
+import { getNextLevel, getNextLesson, isLessonCompleted } from '@/lib/lessons/unlock-logic'
+import { getLevelsByLessonClient, getLessonsClient, getUserProgressClient } from '@/lib/db/queries.client'
 
 export default function LevelPage() {
   const params = useParams()
@@ -101,7 +101,7 @@ export default function LevelPage() {
         is_boss_level: isBossLevel,
       })
 
-      // If passed, unlock next level
+      // If passed, unlock next level or next lesson
       if (passed) {
         try {
           // Get all levels in this lesson to find the next level
@@ -109,6 +109,7 @@ export default function LevelPage() {
           const nextLevel = getNextLevel(level.id, allLevels)
 
           if (nextLevel) {
+            // Unlock next level in same lesson
             await supabase
               .from('user_unlocks')
               .insert({
@@ -117,12 +118,38 @@ export default function LevelPage() {
               })
             console.log(`Unlocked next level: ${nextLevel.name}`)
           } else {
-            console.log('No next level to unlock - lesson completed!')
+            // No more levels in this lesson - check if lesson is completed
+            const userProgress = await getUserProgressClient(userId)
+            const lessonCompleted = isLessonCompleted(lessonId, userProgress, allLevels)
+
+            if (lessonCompleted) {
+              // Unlock next lesson
+              const allLessons = await getLessonsClient()
+              const nextLesson = getNextLesson(lessonId, allLessons)
+
+              if (nextLesson) {
+                // Find the first level of the next lesson and unlock it
+                const nextLessonLevels = await getLevelsByLessonClient(nextLesson.id)
+                const firstLevelOfNextLesson = nextLessonLevels.find(l => l.order_index === 1)
+
+                if (firstLevelOfNextLesson) {
+                  await supabase
+                    .from('user_unlocks')
+                    .insert({
+                      user_id: userId,
+                      level_id: firstLevelOfNextLesson.id,
+                    })
+                  console.log(`Completed lesson and unlocked first level of next lesson: ${firstLevelOfNextLesson.name}`)
+                }
+              } else {
+                console.log('All lessons completed! Congratulations!')
+              }
+            }
           }
         } catch (unlockError) {
           // Ignore duplicate key errors (level already unlocked)
           if ((unlockError as any)?.code !== '23505') {
-            console.error('Error unlocking level:', unlockError)
+            console.error('Error unlocking level/lesson:', unlockError)
           }
         }
       }

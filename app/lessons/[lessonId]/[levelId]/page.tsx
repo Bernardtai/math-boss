@@ -13,6 +13,8 @@ import { GradeReflection } from '@/components/game/GradeReflection'
 import { createClient } from '@/lib/supabase/client'
 import { AuthGuard } from '@/components/auth/AuthGuard'
 import { redirect } from 'next/navigation'
+import { getNextLevel } from '@/lib/lessons/unlock-logic'
+import { getLevelsByLessonClient } from '@/lib/db/queries.client'
 
 export default function LevelPage() {
   const params = useParams()
@@ -102,12 +104,21 @@ export default function LevelPage() {
       // If passed, unlock next level
       if (passed) {
         try {
-          await supabase
-            .from('user_unlocks')
-            .insert({
-              user_id: userId,
-              level_id: level.id,
-            })
+          // Get all levels in this lesson to find the next level
+          const allLevels = await getLevelsByLessonClient(lessonId)
+          const nextLevel = getNextLevel(level.id, allLevels)
+
+          if (nextLevel) {
+            await supabase
+              .from('user_unlocks')
+              .insert({
+                user_id: userId,
+                level_id: nextLevel.id,
+              })
+            console.log(`Unlocked next level: ${nextLevel.name}`)
+          } else {
+            console.log('No next level to unlock - lesson completed!')
+          }
         } catch (unlockError) {
           // Ignore duplicate key errors (level already unlocked)
           if ((unlockError as any)?.code !== '23505') {

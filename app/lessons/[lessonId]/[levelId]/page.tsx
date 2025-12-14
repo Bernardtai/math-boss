@@ -116,21 +116,35 @@ export default function LevelPage() {
                 user_id: userId,
                 level_id: nextLevel.id,
               })
-            console.log(`Unlocked next level: ${nextLevel.name}`)
+            console.log(`✅ Unlocked next level: ${nextLevel.name}`)
           } else {
             // No more levels in this lesson - check if lesson is completed
             const userProgress = await getUserProgressClient(userId)
-            const lessonCompleted = isLessonCompleted(lessonId, userProgress, allLevels)
+            const lessonCompleted = isLessonCompleted(lessonId, userProgress, allLevels, {
+              levelId: level.id,
+              passed: passed
+            })
+
+            console.log(`Lesson ${lessonId} completion check:`, {
+              lessonCompleted,
+              currentLevelPassed: passed,
+              totalLevelsInLesson: allLevels.length,
+              userProgressCount: userProgress.filter(p => allLevels.some(l => l.id === p.level_id)).length
+            })
 
             if (lessonCompleted) {
               // Unlock next lesson
               const allLessons = await getLessonsClient()
               const nextLesson = getNextLesson(lessonId, allLessons)
 
+              console.log(`Next lesson for ${lessonId}:`, nextLesson)
+
               if (nextLesson) {
                 // Find the first level of the next lesson and unlock it
                 const nextLessonLevels = await getLevelsByLessonClient(nextLesson.id)
                 const firstLevelOfNextLesson = nextLessonLevels.find(l => l.order_index === 1)
+
+                console.log(`First level of next lesson ${nextLesson.id}:`, firstLevelOfNextLesson)
 
                 if (firstLevelOfNextLesson) {
                   await supabase
@@ -139,12 +153,17 @@ export default function LevelPage() {
                       user_id: userId,
                       level_id: firstLevelOfNextLesson.id,
                     })
-                  console.log(`Completed lesson and unlocked first level of next lesson: ${firstLevelOfNextLesson.name}`)
+                  console.log(`✅ Completed lesson and unlocked first level of next lesson: ${firstLevelOfNextLesson.name}`)
+                } else {
+                  console.log('❌ No first level found for next lesson')
                 }
               } else {
-                console.log('All lessons completed! Congratulations!')
+                console.log('🎉 All lessons completed! Congratulations!')
               }
+            } else {
+              console.log('❌ Lesson not yet completed - more levels to finish')
             }
+          }
           }
         } catch (unlockError) {
           // Ignore duplicate key errors (level already unlocked)

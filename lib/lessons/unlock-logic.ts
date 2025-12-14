@@ -112,12 +112,19 @@ export function getNextLesson(
 export function isLessonCompleted(
   lessonId: string,
   userProgress: UserProgress[],
-  allLevels: Level[]
+  allLevels: Level[],
+  currentLevelResult?: { levelId: string; passed: boolean }
 ): boolean {
   const lessonLevels = allLevels.filter((level) => level.lesson_id === lessonId)
 
   // Check if user has passed all levels in this lesson
   return lessonLevels.every((level) => {
+    // If this is the current level we just completed, use the result
+    if (currentLevelResult && currentLevelResult.levelId === level.id) {
+      return currentLevelResult.passed
+    }
+
+    // Otherwise check existing progress
     const progress = userProgress.find((p) => p.level_id === level.id)
     return progress?.passed ?? false
   })

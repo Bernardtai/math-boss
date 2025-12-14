@@ -92,8 +92,15 @@ export default function LevelPage() {
       wrongAnswers: finalState.wrongAnswers,
       totalQuestions: finalState.questions.length,
       passed,
-      score
+      score,
+      userId,
+      levelId: level.id,
+      lessonId
     })
+
+    // Check authentication status
+    const { data: authData, error: authError } = await supabase.auth.getUser()
+    console.log(`🔐 Auth check:`, { authData, authError, userId })
 
     // Save progress
     try {
@@ -122,7 +129,31 @@ export default function LevelPage() {
 
           if (nextLevel) {
             // Unlock next level in same lesson
-            console.log(`🔓 Attempting to unlock level: ${nextLevel.id} (${nextLevel.name})`)
+            console.log(`🔓 Attempting to unlock level:`, {
+              levelId: nextLevel.id,
+              levelName: nextLevel.name,
+              userId: userId,
+              lessonId: lessonId
+            })
+
+            // Verify the level exists
+            const { data: levelExists, error: levelCheckError } = await supabase
+              .from('levels')
+              .select('id, name')
+              .eq('id', nextLevel.id)
+              .single()
+
+            console.log(`📋 Level existence check:`, { levelExists, levelCheckError })
+
+            // First, let's check if we can read from the table
+            const { data: existingUnlocks, error: readError } = await supabase
+              .from('user_unlocks')
+              .select('*')
+              .eq('user_id', userId)
+              .eq('level_id', nextLevel.id)
+
+            console.log(`🔍 Existing unlocks check:`, { existingUnlocks, readError })
+
             const unlockResult = await supabase
               .from('user_unlocks')
               .upsert({
@@ -131,15 +162,36 @@ export default function LevelPage() {
               }, {
                 onConflict: 'user_id,level_id'
               })
-            console.log(`🔓 Unlock result:`, unlockResult)
+
+            console.log(`🔓 Unlock result:`, {
+              data: unlockResult.data,
+              error: unlockResult.error,
+              status: unlockResult.status,
+              statusText: unlockResult.statusText
+            })
+
             if (unlockResult.error) {
               console.error(`❌ Failed to unlock level ${nextLevel.name}:`, {
                 error: unlockResult.error,
                 code: unlockResult.error?.code,
                 message: unlockResult.error?.message,
                 details: unlockResult.error?.details,
-                hint: unlockResult.error?.hint
+                hint: unlockResult.error?.hint,
+                fullError: JSON.stringify(unlockResult.error, null, 2)
               })
+
+              // Try with a simple insert to see if it's a constraint issue
+              console.log(`🔄 Trying alternative insert approach...`)
+              const altResult = await supabase
+                .from('user_unlocks')
+                .insert({
+                  user_id: userId,
+                  level_id: nextLevel.id,
+                })
+                .select()
+
+              console.log(`🔄 Alternative insert result:`, altResult)
+
             } else {
               console.log(`✅ Successfully unlocked next level: ${nextLevel.name}`)
             }

@@ -17,15 +17,18 @@ export function Timer({ initialTime, isRunning, onTimeUpdate, penalty = 0 }: Tim
     if (!isRunning) return
 
     const interval = setInterval(() => {
-      setTime((prev) => {
-        const newTime = prev + 1
-        onTimeUpdate?.(newTime)
-        return newTime
-      })
+      setTime((prev) => prev + 1)
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [isRunning, onTimeUpdate])
+  }, [isRunning])
+
+  // Notify parent component of time updates
+  useEffect(() => {
+    if (onTimeUpdate && isRunning) {
+      onTimeUpdate(time)
+    }
+  }, [time, onTimeUpdate, isRunning])
 
   useEffect(() => {
     if (penalty > 0) {

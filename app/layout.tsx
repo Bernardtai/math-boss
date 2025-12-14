@@ -19,11 +19,12 @@ export const metadata: Metadata = {
   description: "Gamified math learning platform using proven Asian teaching methods. Master addition, subtraction, multiplication, and division through interactive lessons and challenges.",
   keywords: "math learning, education, gamified learning, mathematics, Asian method",
   authors: [{ name: "Math Boss" }],
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 5,
-  },
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function RootLayout({

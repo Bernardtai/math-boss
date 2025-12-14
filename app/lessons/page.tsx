@@ -1,3 +1,6 @@
+'use client'
+
+import { useRouter } from 'next/navigation'
 import { AuthGuard } from '@/components/auth/AuthGuard'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -5,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { BookOpen, Lock, Star, Play, Target, Map, Compass, Sword, Shield } from 'lucide-react'
 
 export default function LessonsPage() {
+  const router = useRouter()
   return (
     <div className="min-h-screen bg-background pt-20">
       {/* Game-like header */}
@@ -57,7 +61,10 @@ export default function LessonsPage() {
         {/* Island Map */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* BODMAS Island */}
-            <Card className="relative overflow-hidden bg-emerald-800/40 border-emerald-600/40 backdrop-blur-sm hover:bg-emerald-700/50 transition-all duration-300">
+            <Card 
+              className="relative overflow-hidden bg-emerald-800/40 border-emerald-600/40 backdrop-blur-sm hover:bg-emerald-700/50 transition-all duration-300 cursor-pointer"
+              onClick={() => router.push('/lessons/bodmas')}
+            >
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2 text-white">
@@ -79,7 +86,14 @@ export default function LessonsPage() {
                   <div className="w-full bg-muted rounded-full h-2">
                     <div className="bg-blue-500 h-2 rounded-full w-0"></div>
                   </div>
-                  <Button className="w-full" size="sm">
+                  <Button 
+                    className="w-full" 
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      router.push('/lessons/bodmas')
+                    }}
+                  >
                     <Play className="h-4 w-4 mr-2" />
                     Start Learning
                   </Button>

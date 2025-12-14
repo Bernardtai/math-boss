@@ -125,13 +125,21 @@ export default function LevelPage() {
             console.log(`🔓 Attempting to unlock level: ${nextLevel.id} (${nextLevel.name})`)
             const unlockResult = await supabase
               .from('user_unlocks')
-              .insert({
+              .upsert({
                 user_id: userId,
                 level_id: nextLevel.id,
+              }, {
+                onConflict: 'user_id,level_id'
               })
             console.log(`🔓 Unlock result:`, unlockResult)
             if (unlockResult.error) {
-              console.error(`❌ Failed to unlock level ${nextLevel.name}:`, unlockResult.error)
+              console.error(`❌ Failed to unlock level ${nextLevel.name}:`, {
+                error: unlockResult.error,
+                code: unlockResult.error?.code,
+                message: unlockResult.error?.message,
+                details: unlockResult.error?.details,
+                hint: unlockResult.error?.hint
+              })
             } else {
               console.log(`✅ Successfully unlocked next level: ${nextLevel.name}`)
             }
@@ -170,13 +178,21 @@ export default function LevelPage() {
                   console.log(`🎉 Attempting to unlock first level of next lesson: ${firstLevelOfNextLesson.id} (${firstLevelOfNextLesson.name})`)
                   const lessonUnlockResult = await supabase
                     .from('user_unlocks')
-                    .insert({
+                    .upsert({
                       user_id: userId,
                       level_id: firstLevelOfNextLesson.id,
+                    }, {
+                      onConflict: 'user_id,level_id'
                     })
                   console.log(`🎉 Lesson unlock result:`, lessonUnlockResult)
                   if (lessonUnlockResult.error) {
-                    console.error(`❌ Failed to unlock next lesson level:`, lessonUnlockResult.error)
+                    console.error(`❌ Failed to unlock next lesson level:`, {
+                      error: lessonUnlockResult.error,
+                      code: lessonUnlockResult.error?.code,
+                      message: lessonUnlockResult.error?.message,
+                      details: lessonUnlockResult.error?.details,
+                      hint: lessonUnlockResult.error?.hint
+                    })
                   } else {
                     console.log(`✅ Completed lesson and unlocked first level of next lesson: ${firstLevelOfNextLesson.name}`)
                   }
@@ -191,10 +207,13 @@ export default function LevelPage() {
             }
           }
         } catch (unlockError) {
-          // Ignore duplicate key errors (level already unlocked)
-          if ((unlockError as any)?.code !== '23505') {
-            console.error('Error unlocking level/lesson:', unlockError)
-          }
+          console.error('Error unlocking level/lesson:', {
+            error: unlockError,
+            code: (unlockError as any)?.code,
+            message: (unlockError as any)?.message,
+            details: (unlockError as any)?.details,
+            hint: (unlockError as any)?.hint
+          })
         }
       }
     } catch (error) {

@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
-import { Level, getLevelByIdClient } from '@/lib/db/queries'
+import { Level } from '@/lib/db/types'
+import { getLevelByIdClient } from '@/lib/db/queries.client'
 import { Question } from '@/lib/math-engine/types'
 import { GameState, createInitialGameState } from '@/lib/game/game-state'
 import { checkPassFail, calculateScore } from '@/lib/game/game-logic'
@@ -40,7 +41,7 @@ export default function LevelPage() {
       setUserId(user.id)
 
       // Get level data
-      const levelData = await getLevelById(levelId)
+      const levelData = await getLevelByIdClient(levelId)
       if (!levelData) {
         redirect('/lessons')
         return

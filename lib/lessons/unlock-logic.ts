@@ -1,4 +1,4 @@
-import { Level, UserProgress, UserUnlock } from '@/lib/db/queries'
+import { Level, UserProgress, UserUnlock } from '@/lib/db/types'
 
 /**
  * Check if a level is unlocked for a user

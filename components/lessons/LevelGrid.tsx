@@ -1,6 +1,6 @@
 'use client'
 
-import { Level, UserProgress, UserUnlock } from '@/lib/db/queries'
+import { Level, UserProgress, UserUnlock } from '@/lib/db/types'
 import { LevelCard } from './LevelCard'
 import { isLevelUnlocked } from '@/lib/lessons/unlock-logic'
 import { getIslandTheme } from '@/lib/lessons/island-themes'

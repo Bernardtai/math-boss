@@ -1,6 +1,6 @@
 'use client'
 
-import { Level, UserProgress } from '@/lib/db/queries'
+import { Level, UserProgress } from '@/lib/db/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Lock, Play, Trophy, CheckCircle2 } from 'lucide-react'

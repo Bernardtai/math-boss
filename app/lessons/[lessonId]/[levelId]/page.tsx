@@ -101,15 +101,19 @@ export default function LevelPage() {
 
       // If passed, unlock next level
       if (passed) {
-        await supabase
-          .from('user_unlocks')
-          .insert({
-            user_id: userId,
-            level_id: level.id,
-          })
-          .catch(() => {
-            // Ignore duplicate key errors
-          })
+        try {
+          await supabase
+            .from('user_unlocks')
+            .insert({
+              user_id: userId,
+              level_id: level.id,
+            })
+        } catch (unlockError) {
+          // Ignore duplicate key errors (level already unlocked)
+          if ((unlockError as any)?.code !== '23505') {
+            console.error('Error unlocking level:', unlockError)
+          }
+        }
       }
     } catch (error) {
       console.error('Error saving progress:', error)

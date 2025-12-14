@@ -42,7 +42,7 @@ export class QuestionEngine {
       // Avoid duplicate questions
       if (!usedQuestions.has(question.questionText)) {
         // Shuffle options for each question
-        question.options = shuffleArray([question.correctAnswer, ...question.options.filter(o => o !== question.correctAnswer)])
+        question.options = shuffleArray([question.correctAnswer, ...question.options.filter((o: string | number) => o !== question.correctAnswer)])
         questions.push(question)
         usedQuestions.add(question.questionText)
       }

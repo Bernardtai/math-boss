@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { Button } from '@/components/ui/button'
@@ -60,8 +60,10 @@ const navigation = [
 
 export function Header() {
   const pathname = usePathname()
+  const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loggingOut, setLoggingOut] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const supabase = createClient()
 
@@ -90,10 +92,29 @@ export function Header() {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut()
-      window.location.href = '/'
+      setLoggingOut(true)
+      const { error } = await supabase.auth.signOut()
+      
+      if (error) {
+        console.error('Error logging out:', error)
+        alert('Failed to log out. Please try again.')
+        setLoggingOut(false)
+        return
+      }
+      
+      // Clear user state immediately
+      setUser(null)
+      
+      // Close mobile menu if open
+      setMobileMenuOpen(false)
+      
+      // Redirect to home page using Next.js router
+      router.push('/')
+      router.refresh() // Refresh to clear any cached data
     } catch (error) {
-      console.error('Error logging out:', error)
+      console.error('Unexpected error during logout:', error)
+      alert('An unexpected error occurred during logout. Please try again.')
+      setLoggingOut(false)
     }
   }
 
@@ -182,9 +203,13 @@ export function Header() {
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive focus:text-destructive">
+                      <DropdownMenuItem 
+                        onClick={handleLogout} 
+                        disabled={loggingOut}
+                        className="cursor-pointer text-destructive focus:text-destructive disabled:opacity-50"
+                      >
                         <LogOut className="mr-2 h-4 w-4" />
-                        <span>Log out</span>
+                        <span>{loggingOut ? 'Logging out...' : 'Log out'}</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -270,10 +295,11 @@ export function Header() {
                         <Button
                           variant="outline"
                           onClick={handleLogout}
-                          className="w-full justify-start text-destructive hover:text-destructive"
+                          disabled={loggingOut}
+                          className="w-full justify-start text-destructive hover:text-destructive disabled:opacity-50"
                         >
                           <LogOut className="mr-2 h-4 w-4" />
-                          Log out
+                          {loggingOut ? 'Logging out...' : 'Log out'}
                         </Button>
                       ) : (
                         <Link href="/login" onClick={() => setMobileMenuOpen(false)}>

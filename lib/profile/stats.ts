@@ -35,12 +35,12 @@ export async function getUserStats(userId: string): Promise<UserStats> {
   const totalTimeSeconds = progressData?.reduce((sum, record) => sum + (record.time_taken || 0), 0) || 0
   const totalTimeMinutes = Math.floor(totalTimeSeconds / 60)
 
-  // Get current streak
+  // Get current streak (maybeSingle handles case when no record exists)
   const { data: streakData } = await supabase
     .from('learning_streaks')
     .select('current_streak')
     .eq('user_id', userId)
-    .single()
+    .maybeSingle()
 
   // Calculate total points (sum of all scores)
   const totalPoints = progressData?.reduce((sum, record) => sum + (record.score || 0), 0) || 0

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Play, ArrowRight } from 'lucide-react'
-import { GameState, startGame, submitAnswer, updateTimer, getCurrentQuestion, getProgress } from '@/lib/game/game-state'
+import { GameState, startGame, submitAnswer, updateTimer, getCurrentQuestion, getProgress, Answer } from '@/lib/game/game-state'
 import { validateAnswer } from '@/lib/game/game-logic'
 import { Question } from '@/lib/math-engine/types'
 
@@ -39,8 +39,9 @@ export function GameInterface({ questions, levelId, isBossLevel, onComplete }: G
   const [selectedAnswer, setSelectedAnswer] = useState<string | number | null>(null)
   const [showResult, setShowResult] = useState(false)
   const [questionStartTime, setQuestionStartTime] = useState<number | null>(null)
+  const [displayedQuestionIndex, setDisplayedQuestionIndex] = useState(0)
 
-  const currentQuestion = getCurrentQuestion(gameState)
+  const currentQuestion = gameState.questions[displayedQuestionIndex] || null
   const progress = getProgress(gameState)
 
   // Handle timer updates
@@ -52,6 +53,7 @@ export function GameInterface({ questions, levelId, isBossLevel, onComplete }: G
   const handleStart = () => {
     const newState = startGame(gameState)
     setGameState(newState)
+    setDisplayedQuestionIndex(0)
     setQuestionStartTime(Date.now())
   }
 
@@ -68,17 +70,43 @@ export function GameInterface({ questions, levelId, isBossLevel, onComplete }: G
     const timeTaken = questionStartTime ? Math.floor((Date.now() - questionStartTime) / 1000) : 0
     const isCorrect = validateAnswer(currentQuestion, selectedAnswer)
 
-    const newState = submitAnswer(gameState, selectedAnswer, isCorrect, timeTaken)
+    // Submit answer but don't advance question yet
+    const answerData = {
+      questionId: currentQuestion.id,
+      userAnswer: selectedAnswer,
+      isCorrect,
+      timeTaken,
+    }
+
+    // Update game state with answer (but don't advance index)
+    const newState = {
+      ...gameState,
+      answers: [...gameState.answers, answerData],
+      wrongAnswers: gameState.wrongAnswers + (isCorrect ? 0 : 1),
+      correctAnswers: gameState.correctAnswers + (isCorrect ? 1 : 0),
+      timer: gameState.timer + (isCorrect ? 0 : 5), // +5 seconds penalty for wrong answer
+    }
+
     setGameState(newState)
 
     // Show result briefly
     setShowResult(true)
 
-    // Move to next question or complete
+    // Move to next question or complete after showing result
     setTimeout(() => {
-      if (newState.isCompleted) {
-        onComplete(newState)
+      const isLastQuestion = displayedQuestionIndex === gameState.questions.length - 1
+
+      if (isLastQuestion) {
+        // Mark as completed
+        const completedState = { ...newState, isCompleted: true }
+        setGameState(completedState)
+        onComplete(completedState)
       } else {
+        // Advance to next question
+        const nextIndex = displayedQuestionIndex + 1
+        setDisplayedQuestionIndex(nextIndex)
+
+        // Reset for next question
         setSelectedAnswer(null)
         setShowResult(false)
         setQuestionStartTime(Date.now())

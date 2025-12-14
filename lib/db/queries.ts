@@ -233,6 +233,24 @@ export async function getLevelsByLessonClient(lessonId: string): Promise<Level[]
   return data || []
 }
 
+export async function getLevelByIdClient(levelId: string): Promise<Level | null> {
+  const supabase = createBrowserClient()
+  const { data, error } = await supabase
+    .from('levels')
+    .select('*')
+    .eq('id', levelId)
+    .single()
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      return null
+    }
+    throw new Error(`Failed to fetch level: ${error.message}`)
+  }
+
+  return data
+}
+
 export async function getUserProgressClient(userId: string): Promise<UserProgress[]> {
   const supabase = createBrowserClient()
   const { data, error } = await supabase

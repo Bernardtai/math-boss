@@ -104,7 +104,16 @@ export default function LevelPage() {
 
       // Check authentication status
       const { data: authData, error: authError } = await supabase.auth.getUser()
-      console.log(`🔐 Auth check:`, { authData, authError, userId })
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+      console.log(`🔐 Auth check:`, {
+        authData,
+        authError,
+        sessionData,
+        sessionError,
+        userId,
+        hasValidSession: !!sessionData?.session,
+        sessionUserId: sessionData?.session?.user?.id
+      })
       await supabase.from('user_progress').upsert({
         user_id: userId,
         level_id: level.id,
@@ -167,7 +176,8 @@ export default function LevelPage() {
               data: unlockResult.data,
               error: unlockResult.error,
               status: unlockResult.status,
-              statusText: unlockResult.statusText
+              statusText: unlockResult.statusText,
+              fullResponse: unlockResult
             })
 
             if (unlockResult.error) {
@@ -177,20 +187,52 @@ export default function LevelPage() {
                 message: unlockResult.error?.message,
                 details: unlockResult.error?.details,
                 hint: unlockResult.error?.hint,
-                fullError: JSON.stringify(unlockResult.error, null, 2)
+                fullError: JSON.stringify(unlockResult.error, null, 2),
+                errorKeys: unlockResult.error ? Object.keys(unlockResult.error) : 'No error keys',
+                errorType: unlockResult.error ? typeof unlockResult.error : 'No error type'
               })
+
+              // Try to get more context about the database state
+              console.log(`🔍 Additional debugging for unlock failure:`)
+              console.log(`- User ID: ${userId}`)
+              console.log(`- Level ID: ${nextLevel.id}`)
+              console.log(`- Level exists: ${!!levelExists}`)
+              console.log(`- Existing unlocks:`, existingUnlocks)
+
+              // Try a simple select to see if we can read from the table
+              const { data: testRead, error: testReadError } = await supabase
+                .from('user_unlocks')
+                .select('*')
+                .limit(1)
+              console.log(`🔍 Table accessibility test:`, { testRead, testReadError })
+            }
 
               // Try with a simple insert to see if it's a constraint issue
               console.log(`🔄 Trying alternative insert approach...`)
               const altResult = await supabase
-          .from('user_unlocks')
-          .insert({
-            user_id: userId,
+                .from('user_unlocks')
+                .insert({
+                  user_id: userId,
                   level_id: nextLevel.id,
-          })
+                })
                 .select()
 
-              console.log(`🔄 Alternative insert result:`, altResult)
+              console.log(`🔄 Alternative insert result:`, {
+                data: altResult.data,
+                error: altResult.error,
+                status: altResult.status,
+                fullResponse: altResult
+              })
+
+              if (altResult.error) {
+                console.error(`❌ Alternative insert also failed:`, {
+                  error: altResult.error,
+                  code: altResult.error?.code,
+                  message: altResult.error?.message,
+                  details: altResult.error?.details,
+                  hint: altResult.error?.hint
+                })
+              }
 
             } else {
               console.log(`✅ Successfully unlocked next level: ${nextLevel.name}`)

@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { Level } from '@/lib/db/types'
 import { getLevelByIdClient } from '@/lib/db/queries.client'
 import { Question } from '@/lib/math-engine/types'
-import { GameState, createInitialGameState } from '@/lib/game/game-state'
-import { checkPassFail, calculateScore } from '@/lib/game/game-logic'
+import { GameState, startGame, submitAnswer, updateTimer, getCurrentQuestion, getProgress } from '@/lib/game/game-state'
+import { checkPassFail, calculateScore, validateAnswer } from '@/lib/game/game-logic'
 import { QuestionEngine } from '@/lib/math-engine/QuestionEngine'
 import { GameInterface } from '@/components/game/GameInterface'
 import { GradeReflection } from '@/components/game/GradeReflection'
@@ -27,6 +27,13 @@ export default function LevelPage() {
   const [gameState, setGameState] = useState<GameState | null>(null)
   const [isCompleted, setIsCompleted] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [displayedQuestionIndex, setDisplayedQuestionIndex] = useState(0)
+  const [selectedAnswer, setSelectedAnswer] = useState<string | number | null>(null)
+  const [showResult, setShowResult] = useState(false)
+  const [questionStartTime, setQuestionStartTime] = useState<number | null>(null)
+
+  const currentQuestion = gameState?.questions[displayedQuestionIndex] || null
+  const progress = gameState ? getProgress(gameState) : { current: 0, total: 0, percentage: 0 }
 
   useEffect(() => {
     async function loadData() {
@@ -67,7 +74,18 @@ export default function LevelPage() {
       setQuestions(generatedQuestions)
 
       // Initialize game state
-      const initialState = createInitialGameState(levelData.id, generatedQuestions)
+      const initialState = {
+        levelId,
+        questions: generatedQuestions,
+        currentQuestionIndex: 0,
+        answers: [],
+        timer: 0,
+        startTime: null,
+        isStarted: false,
+        isCompleted: false,
+        wrongAnswers: 0,
+        correctAnswers: 0,
+      }
       setGameState(initialState)
       setIsLoading(false)
     }
@@ -114,6 +132,7 @@ export default function LevelPage() {
         hasValidSession: !!sessionData?.session,
         sessionUserId: sessionData?.session?.user?.id
       })
+
       await supabase.from('user_progress').upsert({
         user_id: userId,
         level_id: level.id,
@@ -128,41 +147,13 @@ export default function LevelPage() {
 
       // If passed, unlock next level or next lesson
       if (passed) {
-        console.log(`🎯 Level passed! Starting unlock process for level: ${level.name}`)
         try {
           // Get all levels in this lesson to find the next level
           const allLevels = await getLevelsByLessonClient(lessonId)
-          console.log(`📋 Found ${allLevels.length} levels in lesson ${lessonId}`)
           const nextLevel = getNextLevel(level.id, allLevels)
-          console.log(`🎯 Next level in same lesson:`, nextLevel)
 
           if (nextLevel) {
             // Unlock next level in same lesson
-            console.log(`🔓 Attempting to unlock level:`, {
-              levelId: nextLevel.id,
-              levelName: nextLevel.name,
-              userId: userId,
-              lessonId: lessonId
-            })
-
-            // Verify the level exists
-            const { data: levelExists, error: levelCheckError } = await supabase
-              .from('levels')
-              .select('id, name')
-              .eq('id', nextLevel.id)
-              .single()
-
-            console.log(`📋 Level existence check:`, { levelExists, levelCheckError })
-
-            // First, let's check if we can read from the table
-            const { data: existingUnlocks, error: readError } = await supabase
-              .from('user_unlocks')
-              .select('*')
-              .eq('user_id', userId)
-              .eq('level_id', nextLevel.id)
-
-            console.log(`🔍 Existing unlocks check:`, { existingUnlocks, readError })
-
             const unlockResult = await supabase
               .from('user_unlocks')
               .upsert({
@@ -172,68 +163,8 @@ export default function LevelPage() {
                 onConflict: 'user_id,level_id'
               })
 
-            console.log(`🔓 Unlock result:`, {
-              data: unlockResult.data,
-              error: unlockResult.error,
-              status: unlockResult.status,
-              statusText: unlockResult.statusText,
-              fullResponse: unlockResult
-            })
-
             if (unlockResult.error) {
-              console.error(`❌ Failed to unlock level ${nextLevel.name}:`, {
-                error: unlockResult.error,
-                code: unlockResult.error?.code,
-                message: unlockResult.error?.message,
-                details: unlockResult.error?.details,
-                hint: unlockResult.error?.hint,
-                fullError: JSON.stringify(unlockResult.error, null, 2),
-                errorKeys: unlockResult.error ? Object.keys(unlockResult.error) : 'No error keys',
-                errorType: unlockResult.error ? typeof unlockResult.error : 'No error type'
-              })
-
-              // Try to get more context about the database state
-              console.log(`🔍 Additional debugging for unlock failure:`)
-              console.log(`- User ID: ${userId}`)
-              console.log(`- Level ID: ${nextLevel.id}`)
-              console.log(`- Level exists: ${!!levelExists}`)
-              console.log(`- Existing unlocks:`, existingUnlocks)
-
-              // Try a simple select to see if we can read from the table
-              const { data: testRead, error: testReadError } = await supabase
-                .from('user_unlocks')
-                .select('*')
-                .limit(1)
-              console.log(`🔍 Table accessibility test:`, { testRead, testReadError })
-            }
-
-              // Try with a simple insert to see if it's a constraint issue
-              console.log(`🔄 Trying alternative insert approach...`)
-              const altResult = await supabase
-                .from('user_unlocks')
-                .insert({
-                  user_id: userId,
-                  level_id: nextLevel.id,
-                })
-                .select()
-
-              console.log(`🔄 Alternative insert result:`, {
-                data: altResult.data,
-                error: altResult.error,
-                status: altResult.status,
-                fullResponse: altResult
-              })
-
-              if (altResult.error) {
-                console.error(`❌ Alternative insert also failed:`, {
-                  error: altResult.error,
-                  code: altResult.error?.code,
-                  message: altResult.error?.message,
-                  details: altResult.error?.details,
-                  hint: altResult.error?.hint
-                })
-              }
-
+              console.error(`❌ Failed to unlock level ${nextLevel.name}:`, unlockResult.error)
             } else {
               console.log(`✅ Successfully unlocked next level: ${nextLevel.name}`)
             }
@@ -245,31 +176,17 @@ export default function LevelPage() {
               passed: passed
             })
 
-            console.log(`📚 Lesson ${lessonId} completion check:`, {
-              lessonCompleted,
-              currentLevelPassed: passed,
-              totalLevelsInLesson: allLevels.length,
-              userProgressCount: userProgress.filter(p => allLevels.some(l => l.id === p.level_id)).length,
-              allLevelsDetails: allLevels.map(l => ({ id: l.id, name: l.name, order: l.order_index })),
-              userProgressDetails: userProgress.filter(p => allLevels.some(l => l.id === p.level_id)).map(p => ({ levelId: p.level_id, passed: p.passed }))
-            })
-
             if (lessonCompleted) {
               // Unlock next lesson
               const allLessons = await getLessonsClient()
               const nextLesson = getNextLesson(lessonId, allLessons)
-
-              console.log(`Next lesson for ${lessonId}:`, nextLesson)
 
               if (nextLesson) {
                 // Find the first level of the next lesson and unlock it
                 const nextLessonLevels = await getLevelsByLessonClient(nextLesson.id)
                 const firstLevelOfNextLesson = nextLessonLevels.find(l => l.order_index === 1)
 
-                console.log(`First level of next lesson ${nextLesson.id}:`, firstLevelOfNextLesson)
-
                 if (firstLevelOfNextLesson) {
-                  console.log(`🎉 Attempting to unlock first level of next lesson: ${firstLevelOfNextLesson.id} (${firstLevelOfNextLesson.name})`)
                   const lessonUnlockResult = await supabase
                     .from('user_unlocks')
                     .upsert({
@@ -278,41 +195,98 @@ export default function LevelPage() {
                     }, {
                       onConflict: 'user_id,level_id'
                     })
-                  console.log(`🎉 Lesson unlock result:`, lessonUnlockResult)
+
                   if (lessonUnlockResult.error) {
-                    console.error(`❌ Failed to unlock next lesson level:`, {
-                      error: lessonUnlockResult.error,
-                      code: lessonUnlockResult.error?.code,
-                      message: lessonUnlockResult.error?.message,
-                      details: lessonUnlockResult.error?.details,
-                      hint: lessonUnlockResult.error?.hint
-                    })
+                    console.error(`❌ Failed to unlock next lesson level:`, lessonUnlockResult.error)
                   } else {
                     console.log(`✅ Completed lesson and unlocked first level of next lesson: ${firstLevelOfNextLesson.name}`)
                   }
-                } else {
-                  console.log('❌ No first level found for next lesson')
                 }
-              } else {
-                console.log('🎉 All lessons completed! Congratulations!')
               }
-            } else {
-              console.log('❌ Lesson not yet completed - more levels to finish')
             }
           }
         } catch (unlockError) {
-          console.error('Error unlocking level/lesson:', {
-            error: unlockError,
-            code: (unlockError as any)?.code,
-            message: (unlockError as any)?.message,
-            details: (unlockError as any)?.details,
-            hint: (unlockError as any)?.hint
-          })
+          console.error('Error unlocking level/lesson:', unlockError)
         }
       }
     } catch (error) {
       console.error('Error saving progress:', error)
     }
+  }
+
+  // Handle timer updates
+  const handleTimeUpdate = useCallback((time: number) => {
+    setGameState((prev) => prev ? updateTimer(prev, time) : null)
+  }, [])
+
+  // Handle game start
+  const handleStart = () => {
+    if (!gameState) return
+    const newState = startGame(gameState)
+    setGameState(newState)
+    setDisplayedQuestionIndex(0)
+    setQuestionStartTime(Date.now())
+  }
+
+  // Handle answer selection
+  const handleAnswerSelect = (answer: string | number) => {
+    if (showResult || !currentQuestion) return
+    setSelectedAnswer(answer)
+  }
+
+  // Handle answer submission
+  const handleSubmit = () => {
+    if (!currentQuestion || selectedAnswer === null || !gameState) return
+
+    const timeTaken = questionStartTime ? Math.floor((Date.now() - questionStartTime) / 1000) : 0
+    const isCorrect = validateAnswer(currentQuestion, selectedAnswer)
+
+    // Submit answer but don't advance question yet
+    const answerData = {
+      questionId: currentQuestion.id,
+      userAnswer: selectedAnswer,
+      isCorrect,
+      timeTaken,
+    }
+
+    // Update game state with answer (but don't advance index)
+    const newState = {
+      ...gameState,
+      answers: [...gameState.answers, answerData],
+      wrongAnswers: gameState.wrongAnswers + (isCorrect ? 0 : 1),
+      correctAnswers: gameState.correctAnswers + (isCorrect ? 1 : 0),
+      timer: gameState.timer + (isCorrect ? 0 : 5), // +5 seconds penalty for wrong answer
+    }
+
+    setGameState(newState)
+
+    // Show result briefly
+    setShowResult(true)
+
+    // Move to next question or complete after showing result
+    setTimeout(() => {
+      const isLastQuestion = displayedQuestionIndex === gameState.questions.length - 1
+
+      if (isLastQuestion) {
+        // Mark as completed
+        const completedState = { ...newState, isCompleted: true, currentQuestionIndex: displayedQuestionIndex }
+        setGameState(completedState)
+        handleGameComplete(completedState)
+      } else {
+        // Advance to next question
+        const nextIndex = displayedQuestionIndex + 1
+        setDisplayedQuestionIndex(nextIndex)
+
+        // Update game state with new question index for progress tracking
+        const updatedState = { ...newState, currentQuestionIndex: nextIndex }
+        setGameState(updatedState)
+
+        // Reset for next question
+        setSelectedAnswer(null)
+        setShowResult(false)
+        setQuestionStartTime(Date.now())
+      }
+    }, 2000)
   }
 
   if (isLoading || !gameState || !level || !userId) {
@@ -353,4 +327,3 @@ export default function LevelPage() {
     </AuthGuard>
   )
 }
-

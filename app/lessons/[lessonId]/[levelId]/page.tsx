@@ -133,7 +133,7 @@ export default function LevelPage() {
         sessionUserId: sessionData?.session?.user?.id
       })
 
-      await supabase.from('user_progress').upsert({
+      console.log(`💾 Saving progress:`, {
         user_id: userId,
         level_id: level.id,
         score,
@@ -145,6 +145,25 @@ export default function LevelPage() {
         is_boss_level: isBossLevel,
       })
 
+      const progressResult = await supabase.from('user_progress').upsert({
+        user_id: userId,
+        level_id: level.id,
+        score,
+        time_taken: finalState.timer,
+        questions_answered: finalState.questions.length,
+        questions_correct: finalState.correctAnswers,
+        questions_wrong: finalState.wrongAnswers,
+        passed,
+        is_boss_level: isBossLevel,
+      })
+
+      console.log(`💾 Progress save result:`, progressResult)
+
+      if (progressResult.error) {
+        console.error(`❌ Failed to save progress:`, progressResult.error)
+        throw new Error(`Failed to save progress: ${progressResult.error.message}`)
+      }
+
       // If passed, unlock next level or next lesson
       if (passed) {
         try {
@@ -154,6 +173,12 @@ export default function LevelPage() {
 
           if (nextLevel) {
             // Unlock next level in same lesson
+            console.log(`🔓 Unlocking next level:`, {
+              user_id: userId,
+              level_id: nextLevel.id,
+              levelName: nextLevel.name
+            })
+
             const unlockResult = await supabase
               .from('user_unlocks')
               .upsert({
@@ -163,8 +188,11 @@ export default function LevelPage() {
                 onConflict: 'user_id,level_id'
               })
 
+            console.log(`🔓 Unlock result:`, unlockResult)
+
             if (unlockResult.error) {
               console.error(`❌ Failed to unlock level ${nextLevel.name}:`, unlockResult.error)
+              throw new Error(`Failed to unlock level: ${unlockResult.error.message}`)
             } else {
               console.log(`✅ Successfully unlocked next level: ${nextLevel.name}`)
             }
@@ -187,6 +215,12 @@ export default function LevelPage() {
                 const firstLevelOfNextLesson = nextLessonLevels.find(l => l.order_index === 1)
 
                 if (firstLevelOfNextLesson) {
+                  console.log(`🎉 Unlocking first level of next lesson:`, {
+                    user_id: userId,
+                    level_id: firstLevelOfNextLesson.id,
+                    levelName: firstLevelOfNextLesson.name
+                  })
+
                   const lessonUnlockResult = await supabase
                     .from('user_unlocks')
                     .upsert({
@@ -196,8 +230,11 @@ export default function LevelPage() {
                       onConflict: 'user_id,level_id'
                     })
 
+                  console.log(`🎉 Lesson unlock result:`, lessonUnlockResult)
+
                   if (lessonUnlockResult.error) {
                     console.error(`❌ Failed to unlock next lesson level:`, lessonUnlockResult.error)
+                    throw new Error(`Failed to unlock next lesson: ${lessonUnlockResult.error.message}`)
                   } else {
                     console.log(`✅ Completed lesson and unlocked first level of next lesson: ${firstLevelOfNextLesson.name}`)
                   }
@@ -271,7 +308,7 @@ export default function LevelPage() {
         // Mark as completed
         const completedState = { ...newState, isCompleted: true, currentQuestionIndex: displayedQuestionIndex }
         setGameState(completedState)
-        handleGameComplete(completedState)
+        // GameInterface will call onComplete prop
       } else {
         // Advance to next question
         const nextIndex = displayedQuestionIndex + 1

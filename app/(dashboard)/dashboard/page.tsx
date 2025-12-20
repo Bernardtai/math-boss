@@ -1,10 +1,78 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import { AuthGuard } from '@/components/auth/AuthGuard'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Trophy, Target, Clock, TrendingUp, Star, Award } from 'lucide-react'
+import { AgeSelection } from '@/components/auth/AgeSelection'
+import { createClient } from '@/lib/supabase/client'
+import { getOrCreateProfile } from '@/lib/profile/profile'
+import type { Profile } from '@/lib/profile/types'
 
 export default function DashboardPage() {
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [loading, setLoading] = useState(true)
+  const supabase = createClient()
+
+  useEffect(() => {
+    async function loadProfile() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const userProfile = await getOrCreateProfile(
+            user.id,
+            user.email || '',
+            {
+              full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+              avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
+            }
+          )
+          if (userProfile) {
+            setProfile(userProfile)
+          }
+        }
+      } catch (error) {
+        console.error('Error loading profile:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadProfile()
+  }, [supabase])
+
+  const handleAgeComplete = async () => {
+    // Reload profile to get updated age
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const userProfile = await getOrCreateProfile(
+        user.id,
+        user.email || '',
+        {
+          full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+          avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
+        }
+      )
+      if (userProfile) {
+        setProfile(userProfile)
+      }
+    }
+  }
+
+  // Show age selection if user doesn't have age set
+  if (!loading && profile && !profile.age) {
+    return (
+      <AuthGuard>
+        <div className="min-h-screen bg-background pt-20 flex items-center justify-center px-4">
+          <div className="w-full max-w-md">
+            <AgeSelection onComplete={handleAgeComplete} required={true} />
+          </div>
+        </div>
+      </AuthGuard>
+    )
+  }
+
   return (
     <AuthGuard>
       <div className="min-h-screen bg-background pt-20">

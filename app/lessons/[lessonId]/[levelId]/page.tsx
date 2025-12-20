@@ -10,11 +10,24 @@ import { checkPassFail, calculateScore, validateAnswer } from '@/lib/game/game-l
 import { QuestionEngine } from '@/lib/math-engine/QuestionEngine'
 import { GameInterface } from '@/components/game/GameInterface'
 import { GradeReflection } from '@/components/game/GradeReflection'
+import { StoryDisplay } from '@/components/game/StoryDisplay'
 import { createClient } from '@/lib/supabase/client'
 import { AuthGuard } from '@/components/auth/AuthGuard'
 import { redirect } from 'next/navigation'
 import { getNextLevel, getNextLesson, isLessonCompleted } from '@/lib/lessons/unlock-logic'
 import { getLevelsByLessonClient, getLessonsClient, getUserProgressClient } from '@/lib/db/queries.client'
+import { getOrCreateProfile } from '@/lib/profile/profile'
+import { getStoryIntro, getFailureVariant, getStoryState, updateStoryStateAfterFailure, resetStoryState } from '@/lib/storyline/story-manager'
+import { calculateMissionProgress, isMissionComplete, MissionType } from '@/lib/game/missions'
+import { EscapeMission } from '@/components/game/missions/EscapeMission'
+import { HitMission } from '@/components/game/missions/HitMission'
+import { CollectMission } from '@/components/game/missions/CollectMission'
+import { RaceMission } from '@/components/game/missions/RaceMission'
+import { PuzzleMission } from '@/components/game/missions/PuzzleMission'
+import { DefendMission } from '@/components/game/missions/DefendMission'
+import { BossLevelInterface } from '@/components/game/BossLevelInterface'
+import type { Profile } from '@/lib/profile/types'
+import type { UserStoryState } from '@/lib/db/types'
 
 export default function LevelPage() {
   const params = useParams()
@@ -31,6 +44,14 @@ export default function LevelPage() {
   const [selectedAnswer, setSelectedAnswer] = useState<string | number | null>(null)
   const [showResult, setShowResult] = useState(false)
   const [questionStartTime, setQuestionStartTime] = useState<number | null>(null)
+  
+  // Story and mission state
+  const [userProfile, setUserProfile] = useState<Profile | null>(null)
+  const [storyState, setStoryState] = useState<UserStoryState | null>(null)
+  const [showStoryIntro, setShowStoryIntro] = useState(false)
+  const [showFailureStory, setShowFailureStory] = useState(false)
+  const [failureStoryText, setFailureStoryText] = useState<string>('')
+  const [gameStarted, setGameStarted] = useState(false)
 
   const currentQuestion = gameState?.questions[displayedQuestionIndex] || null
   const progress = gameState ? getProgress(gameState) : { current: 0, total: 0, percentage: 0 }
@@ -49,6 +70,19 @@ export default function LevelPage() {
 
       setUserId(user.id)
 
+      // Get user profile for age and avatar
+      const profile = await getOrCreateProfile(
+        user.id,
+        user.email || '',
+        {
+          full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+          avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
+        }
+      )
+      if (profile) {
+        setUserProfile(profile)
+      }
+
       // Get level data
       const levelData = await getLevelByIdClient(levelId)
       if (!levelData) {
@@ -57,6 +91,17 @@ export default function LevelPage() {
       }
 
       setLevel(levelData)
+
+      // Load story state
+      const storyStateData = await getStoryState(user.id, levelId)
+      if (storyStateData) {
+        setStoryState(storyStateData)
+      }
+
+      // Show story intro if available
+      if (levelData.story_intro) {
+        setShowStoryIntro(true)
+      }
 
       // Check if level is unlocked
       const isBossLevel = levelData.level_type.startsWith('boss')
@@ -104,6 +149,28 @@ export default function LevelPage() {
     const passed = checkPassFail(finalState, isBossLevel)
     const score = calculateScore(finalState, isBossLevel)
 
+    // Handle story state based on pass/fail
+    if (passed) {
+      // Reset story state on success
+      await resetStoryState(userId, levelId)
+    } else {
+      // Update story state with failure
+      const failureType = finalState.wrongAnswers > 4 ? 'wrong_answers' : 'too_slow'
+      const updatedStoryState = await updateStoryStateAfterFailure(userId, levelId, failureType)
+      if (updatedStoryState && level.story_failure_variants) {
+        setStoryState(updatedStoryState)
+        // Show failure variant story
+        const failureStory = getFailureVariant(
+          level,
+          updatedStoryState.attempt_count,
+          failureType,
+          userProfile?.age || null
+        )
+        setFailureStoryText(failureStory)
+        setShowFailureStory(true)
+      }
+    }
+
     console.log(`Level completion check for ${level.name}:`, {
       isBossLevel,
       correctAnswers: finalState.correctAnswers,
@@ -133,6 +200,28 @@ export default function LevelPage() {
         sessionUserId: sessionData?.session?.user?.id
       })
 
+      // Ensure profile exists before saving progress
+      if (authData?.user) {
+        try {
+          const profile = await getOrCreateProfile(
+            userId,
+            authData.user.email || '',
+            {
+              full_name: authData.user.user_metadata?.full_name || authData.user.user_metadata?.name || null,
+              avatar_url: authData.user.user_metadata?.avatar_url || authData.user.user_metadata?.picture || null,
+            }
+          )
+          if (!profile) {
+            console.warn(`⚠️ Profile creation failed for user ${userId}, but continuing...`)
+          } else {
+            console.log(`✅ Profile verified/created for user ${userId}`)
+          }
+        } catch (profileError) {
+          console.error(`❌ Error ensuring profile exists:`, profileError)
+          // Continue anyway - the database trigger might create it, or we'll get a clearer error
+        }
+      }
+
       console.log(`💾 Saving progress:`, {
         user_id: userId,
         level_id: level.id,
@@ -157,11 +246,25 @@ export default function LevelPage() {
         is_boss_level: isBossLevel,
       })
 
-      console.log(`💾 Progress save result:`, progressResult)
+      console.log(`💾 Progress save result:`, {
+        data: progressResult.data,
+        error: progressResult.error ? {
+          message: progressResult.error.message,
+          code: progressResult.error.code,
+          details: progressResult.error.details,
+          hint: progressResult.error.hint,
+        } : null,
+      })
 
       if (progressResult.error) {
-        console.error(`❌ Failed to save progress:`, progressResult.error)
-        throw new Error(`Failed to save progress: ${progressResult.error.message}`)
+        console.error(`❌ Failed to save progress:`, {
+          message: progressResult.error.message,
+          code: progressResult.error.code,
+          details: progressResult.error.details,
+          hint: progressResult.error.hint,
+          fullError: progressResult.error,
+        })
+        throw new Error(`Failed to save progress: ${progressResult.error.message || 'Unknown error'}`)
       }
 
       // If passed, unlock next level or next lesson
@@ -180,7 +283,7 @@ export default function LevelPage() {
             })
 
             const unlockResult = await supabase
-              .from('user_unlocks')
+          .from('user_unlocks')
               .upsert({
                 user_id: userId,
                 level_id: nextLevel.id,
@@ -216,7 +319,7 @@ export default function LevelPage() {
 
                 if (firstLevelOfNextLesson) {
                   console.log(`🎉 Unlocking first level of next lesson:`, {
-                    user_id: userId,
+            user_id: userId,
                     level_id: firstLevelOfNextLesson.id,
                     levelName: firstLevelOfNextLesson.name
                   })
@@ -243,11 +346,18 @@ export default function LevelPage() {
             }
           }
         } catch (unlockError) {
-          console.error('Error unlocking level/lesson:', unlockError)
+          console.error('Error unlocking level/lesson:', {
+            message: unlockError instanceof Error ? unlockError.message : String(unlockError),
+            error: unlockError,
+          })
         }
       }
     } catch (error) {
-      console.error('Error saving progress:', error)
+      console.error('Error saving progress:', {
+        message: error instanceof Error ? error.message : String(error),
+        error: error,
+        stack: error instanceof Error ? error.stack : undefined,
+      })
     }
   }
 
@@ -255,6 +365,35 @@ export default function LevelPage() {
   const handleTimeUpdate = useCallback((time: number) => {
     setGameState((prev) => prev ? updateTimer(prev, time) : null)
   }, [])
+
+  // Handle story intro continue
+  const handleStoryIntroContinue = () => {
+    setShowStoryIntro(false)
+    setGameStarted(true)
+  }
+
+  // Handle failure story continue
+  const handleFailureStoryContinue = () => {
+    setShowFailureStory(false)
+    setIsCompleted(false)
+    // Reset game state for retry
+    if (gameState) {
+      const resetState = {
+        ...gameState,
+        isStarted: false,
+        isCompleted: false,
+        answers: [],
+        currentQuestionIndex: 0,
+        timer: 0,
+        wrongAnswers: 0,
+        correctAnswers: 0,
+      }
+      setGameState(resetState)
+      setDisplayedQuestionIndex(0)
+      setSelectedAnswer(null)
+      setShowResult(false)
+    }
+  }
 
   // Handle game start
   const handleStart = () => {
@@ -335,32 +474,132 @@ export default function LevelPage() {
   }
 
   const isBossLevel = level.level_type.startsWith('boss')
+  const missionType = level.mission_type || 'escape'
+
+  // Render mission overlay component based on mission type
+  const renderMissionOverlay = () => {
+    if (!gameState || !gameState.isStarted || gameState.isCompleted) return null
+
+    const progress = calculateMissionProgress(
+      missionType as MissionType,
+      gameState.correctAnswers,
+      gameState.questions.length,
+      gameState.wrongAnswers,
+      gameState.timer
+    )
+
+    const missionProps = {
+      progress,
+      correctAnswers: gameState.correctAnswers,
+      totalQuestions: gameState.questions.length,
+      timeRemaining: undefined,
+    }
+
+    switch (missionType) {
+      case 'escape':
+        return <EscapeMission {...missionProps} />
+      case 'hit':
+        return <HitMission progress={progress} hits={gameState.correctAnswers} targetHits={gameState.questions.length} />
+      case 'collect':
+        return <CollectMission progress={progress} collected={gameState.correctAnswers} targetCollect={gameState.questions.length} />
+      case 'race':
+        return <RaceMission {...missionProps} />
+      case 'puzzle':
+        return <PuzzleMission progress={progress} puzzlesSolved={gameState.correctAnswers} targetPuzzles={gameState.questions.length} />
+      case 'defend':
+        return <DefendMission progress={progress} health={gameState.questions.length - gameState.wrongAnswers} maxHealth={gameState.questions.length} attacksBlocked={gameState.correctAnswers} />
+      default:
+        return null
+    }
+  }
+
+  // Show story intro before game starts
+  if (showStoryIntro && level.story_intro) {
+    const storyText = getStoryIntro(level, userProfile?.age || null)
+    return (
+      <AuthGuard>
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
+          <StoryDisplay
+            storyText={storyText}
+            avatarCustomization={userProfile?.avatar_customization || null}
+            onContinue={handleStoryIntroContinue}
+            showContinueButton={true}
+            animated={true}
+          />
+        </div>
+      </AuthGuard>
+    )
+  }
+
+  // Show failure story if failed
+  if (showFailureStory && failureStoryText) {
+    return (
+      <AuthGuard>
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
+          <StoryDisplay
+            storyText={failureStoryText}
+            avatarCustomization={userProfile?.avatar_customization || null}
+            onContinue={handleFailureStoryContinue}
+            showContinueButton={true}
+            animated={true}
+          />
+        </div>
+      </AuthGuard>
+    )
+  }
+
+  // Apply boss environment styling
+  const bossEnvironmentStyle = isBossLevel && level.boss_environment
+    ? {
+        backgroundColor: level.boss_environment.visual_effects?.colorScheme?.[0] || undefined,
+        color: '#ffffff',
+      }
+    : {}
+
+  const content = (
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
+      {isCompleted ? (
+        <GradeReflection
+          gameState={gameState}
+          isBossLevel={isBossLevel}
+          levelId={level.id}
+          lessonId={lessonId}
+          userId={userId}
+        />
+      ) : (
+        <div className="relative">
+          {/* Mission Overlay */}
+          {renderMissionOverlay()}
+          
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold mb-2">{level.name}</h1>
+            <p className="text-muted-foreground">{level.description}</p>
+          </div>
+          <GameInterface
+            questions={questions}
+            levelId={level.id}
+            isBossLevel={isBossLevel}
+            onComplete={handleGameComplete}
+          />
+        </div>
+      )}
+    </div>
+  )
+
+  // Wrap boss levels with BossLevelInterface for enhanced environment
+  if (isBossLevel && level.boss_environment) {
+    return (
+      <AuthGuard>
+        <BossLevelInterface environment={level.boss_environment}>
+          {content}
+        </BossLevelInterface>
+      </AuthGuard>
+    )
+  }
 
   return (
     <AuthGuard>
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        {isCompleted ? (
-          <GradeReflection
-            gameState={gameState}
-            isBossLevel={isBossLevel}
-            levelId={level.id}
-            lessonId={lessonId}
-          />
-        ) : (
-          <div>
-            <div className="mb-6">
-              <h1 className="text-3xl font-bold mb-2">{level.name}</h1>
-              <p className="text-muted-foreground">{level.description}</p>
-            </div>
-            <GameInterface
-              questions={questions}
-              levelId={level.id}
-              isBossLevel={isBossLevel}
-              onComplete={handleGameComplete}
-            />
-          </div>
-        )}
-      </div>
+      {content}
     </AuthGuard>
   )
 }

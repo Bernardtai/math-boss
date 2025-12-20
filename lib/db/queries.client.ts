@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
-import { Lesson, Level, UserProgress, UserUnlock } from './types'
+import { Lesson, Level, UserProgress, UserUnlock, LeaderboardEntry } from './types'
+import { calculateRankingScore } from '@/lib/game/leaderboard'
 
 // Client-side queries (for use in client components)
 export async function getLessonsClient(): Promise<Lesson[]> {
@@ -93,5 +94,140 @@ export async function getUserUnlocksClient(userId: string): Promise<UserUnlock[]
   }
 
   return data || []
+}
+
+export async function getLevelLeaderboard(levelId: string, limit: number = 10): Promise<LeaderboardEntry[]> {
+  const supabase = createClient()
+  
+  // Fetch user progress with profile data
+  const { data, error } = await supabase
+    .from('user_progress')
+    .select(`
+      user_id,
+      time_taken,
+      questions_correct,
+      questions_answered,
+      profiles:user_id (
+        full_name,
+        avatar_url
+      )
+    `)
+    .eq('level_id', levelId)
+    .eq('passed', true)
+    .not('time_taken', 'is', null)
+
+  if (error) {
+    throw new Error(`Failed to fetch leaderboard: ${error.message}`)
+  }
+
+  if (!data || data.length === 0) {
+    return []
+  }
+
+  // Calculate ranking scores and create entries
+  const entries: LeaderboardEntry[] = data
+    .map((item: any) => {
+      const profile = Array.isArray(item.profiles) ? item.profiles[0] : item.profiles
+      const rankingScore = calculateRankingScore(
+        item.questions_correct,
+        item.questions_answered,
+        item.time_taken
+      )
+      const accuracy = (item.questions_correct / item.questions_answered) * 100
+
+      return {
+        rank: 0, // Will be set after sorting
+        user_id: item.user_id,
+        full_name: profile?.full_name || null,
+        avatar_url: profile?.avatar_url || null,
+        time_taken: item.time_taken,
+        questions_correct: item.questions_correct,
+        questions_answered: item.questions_answered,
+        accuracy,
+        ranking_score: rankingScore,
+      }
+    })
+    .sort((a, b) => {
+      // Sort by ranking_score DESC, then time_taken ASC (tiebreaker)
+      if (b.ranking_score !== a.ranking_score) {
+        return b.ranking_score - a.ranking_score
+      }
+      return a.time_taken - b.time_taken
+    })
+    .slice(0, limit)
+    .map((entry, index) => ({
+      ...entry,
+      rank: index + 1,
+    }))
+
+  return entries
+}
+
+export async function getUserLeaderboardRank(levelId: string, userId: string): Promise<LeaderboardEntry | null> {
+  const supabase = createClient()
+  
+  // Fetch all passed entries for ranking calculation
+  const { data, error } = await supabase
+    .from('user_progress')
+    .select(`
+      user_id,
+      time_taken,
+      questions_correct,
+      questions_answered,
+      profiles:user_id (
+        full_name,
+        avatar_url
+      )
+    `)
+    .eq('level_id', levelId)
+    .eq('passed', true)
+    .not('time_taken', 'is', null)
+
+  if (error) {
+    throw new Error(`Failed to fetch user rank: ${error.message}`)
+  }
+
+  if (!data || data.length === 0) {
+    return null
+  }
+
+  // Calculate ranking scores and sort
+  const entries: LeaderboardEntry[] = data
+    .map((item: any) => {
+      const profile = Array.isArray(item.profiles) ? item.profiles[0] : item.profiles
+      const rankingScore = calculateRankingScore(
+        item.questions_correct,
+        item.questions_answered,
+        item.time_taken
+      )
+      const accuracy = (item.questions_correct / item.questions_answered) * 100
+
+      return {
+        rank: 0, // Will be set after sorting
+        user_id: item.user_id,
+        full_name: profile?.full_name || null,
+        avatar_url: profile?.avatar_url || null,
+        time_taken: item.time_taken,
+        questions_correct: item.questions_correct,
+        questions_answered: item.questions_answered,
+        accuracy,
+        ranking_score: rankingScore,
+      }
+    })
+    .sort((a, b) => {
+      // Sort by ranking_score DESC, then time_taken ASC (tiebreaker)
+      if (b.ranking_score !== a.ranking_score) {
+        return b.ranking_score - a.ranking_score
+      }
+      return a.time_taken - b.time_taken
+    })
+    .map((entry, index) => ({
+      ...entry,
+      rank: index + 1,
+    }))
+
+  // Find user's entry
+  const userEntry = entries.find(entry => entry.user_id === userId)
+  return userEntry || null
 }
 

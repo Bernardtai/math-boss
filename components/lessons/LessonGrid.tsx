@@ -1,6 +1,9 @@
 'use client'
 
+import { useState } from 'react'
 import { LessonIsland } from './LessonIsland'
+import { Island3DView } from './Island3DView'
+import type { IslandType } from '@/lib/3d/island-generator'
 
 interface Lesson {
   id: string
@@ -88,7 +91,21 @@ interface LessonGridProps {
   onIslandClick?: (lessonId: string) => void
 }
 
+const lessonIdToIslandType = (lessonId: string): IslandType => {
+  const mapping: Record<string, IslandType> = {
+    bodmas: 'bodmas',
+    grid_method: 'grid_method',
+    fractions: 'fractions',
+    decimals: 'decimals',
+    percentages: 'percentages',
+    algebra: 'algebra',
+  }
+  return mapping[lessonId] || 'bodmas'
+}
+
 export function LessonGrid({ onIslandClick }: LessonGridProps) {
+  const [selectedIsland, setSelectedIsland] = useState<{ id: string; name: string; type: IslandType } | null>(null)
+
   const handleIslandClick = (lessonId: string) => {
     if (onIslandClick) {
       onIslandClick(lessonId)
@@ -97,6 +114,14 @@ export function LessonGrid({ onIslandClick }: LessonGridProps) {
       console.log(`Navigate to lesson: ${lessonId}`)
       // TODO: Implement navigation to lesson page
     }
+  }
+
+  const handleView3D = (lessonId: string, lessonName: string) => {
+    setSelectedIsland({
+      id: lessonId,
+      name: lessonName,
+      type: lessonIdToIslandType(lessonId),
+    })
   }
 
   return (
@@ -115,13 +140,32 @@ export function LessonGrid({ onIslandClick }: LessonGridProps) {
       {/* Island Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
         {lessons.map((lesson) => (
-          <LessonIsland
-            key={lesson.id}
-            {...lesson}
-            onClick={() => handleIslandClick(lesson.id)}
-          />
+          <div key={lesson.id} className="relative group">
+            <LessonIsland
+              {...lesson}
+              onClick={() => handleIslandClick(lesson.id)}
+            />
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handleView3D(lesson.id, lesson.name)
+              }}
+              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-primary text-primary-foreground px-3 py-1 rounded-md text-sm font-medium hover:bg-primary/90"
+            >
+              3D View
+            </button>
+          </div>
         ))}
       </div>
+
+      {/* 3D Island View Modal */}
+      {selectedIsland && (
+        <Island3DView
+          islandType={selectedIsland.type}
+          islandName={selectedIsland.name}
+          onClose={() => setSelectedIsland(null)}
+        />
+      )}
 
       {/* Progress Summary */}
       <div className="bg-white rounded-lg shadow-lg p-6 max-w-4xl mx-auto">

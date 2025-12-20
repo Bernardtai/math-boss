@@ -13,6 +13,8 @@ import { getOrCreateProfile, updateProfile, uploadAvatar } from '@/lib/profile/p
 import { getUserStats, getIslandProgress, getUserAchievements } from '@/lib/profile/stats'
 import type { Profile, UserStats, IslandProgress, UserAchievement } from '@/lib/profile/types'
 import { Input } from '@/components/ui/input'
+import { AvatarCustomizer } from '@/components/profile/AvatarCustomizer'
+import { AvatarRenderer } from '@/components/game/AvatarRenderer'
 
 function ProfilePageContent() {
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -27,6 +29,7 @@ function ProfilePageContent() {
   const [editedName, setEditedName] = useState('')
   const [isSavingName, setIsSavingName] = useState(false)
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
+  const [showAvatarCustomizer, setShowAvatarCustomizer] = useState(false)
   
   const fileInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
@@ -474,6 +477,57 @@ function ProfilePageContent() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Avatar Customization */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AvatarRenderer
+                customization={profile?.avatar_customization || null}
+                size="md"
+                pose="idle"
+              />
+              <span>Customize Your Avatar</span>
+            </CardTitle>
+            <CardDescription>
+              Design your character that appears throughout your adventure
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {showAvatarCustomizer && profile ? (
+              <AvatarCustomizer
+                userId={profile.id}
+                initialCustomization={profile.avatar_customization || null}
+                onSave={(customization) => {
+                  // Refresh profile after save
+                  setProfile({ ...profile, avatar_customization: customization })
+                  setShowAvatarCustomizer(false)
+                }}
+              />
+            ) : (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <AvatarRenderer
+                    customization={profile?.avatar_customization || null}
+                    size="lg"
+                    pose="idle"
+                  />
+                  <div>
+                    <p className="font-medium">Your Adventure Character</p>
+                    <p className="text-sm text-muted-foreground">
+                      {profile?.avatar_customization
+                        ? 'Customize your avatar to change your appearance'
+                        : 'Create your unique character for the adventure'}
+                    </p>
+                  </div>
+                </div>
+                <Button onClick={() => setShowAvatarCustomizer(true)}>
+                  {profile?.avatar_customization ? 'Edit Avatar' : 'Create Avatar'}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Progress Overview */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">

@@ -1,10 +1,13 @@
 'use client'
 
+import { useState } from 'react'
 import { GameState } from '@/lib/game/game-state'
 import { checkPassFail, calculateScore, getGrade, getIncorrectQuestions } from '@/lib/game/game-logic'
 import { TutorialDisplay } from './TutorialDisplay'
+import { LevelLeaderboard } from './LevelLeaderboard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Trophy, XCircle, CheckCircle2, RotateCcw, ArrowRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
@@ -13,10 +16,12 @@ interface GradeReflectionProps {
   isBossLevel: boolean
   levelId: string
   lessonId: string
+  userId: string | null
 }
 
-export function GradeReflection({ gameState, isBossLevel, levelId, lessonId }: GradeReflectionProps) {
+export function GradeReflection({ gameState, isBossLevel, levelId, lessonId, userId }: GradeReflectionProps) {
   const router = useRouter()
+  const [showLeaderboard, setShowLeaderboard] = useState(false)
   const passed = checkPassFail(gameState, isBossLevel)
   const score = calculateScore(gameState, isBossLevel)
   const grade = getGrade(gameState.correctAnswers, gameState.questions.length)
@@ -105,18 +110,45 @@ export function GradeReflection({ gameState, isBossLevel, levelId, lessonId }: G
       )}
 
       {/* Action Buttons */}
+      <div className="space-y-4">
       <div className="flex gap-4">
         {passed ? (
+            <>
           <Button onClick={handleContinue} size="lg" className="flex-1">
             Continue
             <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
+              <Sheet open={showLeaderboard} onOpenChange={setShowLeaderboard}>
+                <SheetTrigger asChild>
+                  <Button size="lg" variant="outline" className="flex-1">
+                    <Trophy className="mr-2 h-5 w-5" />
+                    Leaderboard
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
+                  <SheetHeader>
+                    <SheetTitle>Level Leaderboard</SheetTitle>
+                  </SheetHeader>
+                  <div className="mt-6">
+                    <LevelLeaderboard levelId={levelId} userId={userId} />
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </>
         ) : (
+            <>
           <Button onClick={handleRetry} size="lg" className="flex-1" variant="destructive">
             <RotateCcw className="mr-2 h-5 w-5" />
             Retry Level
           </Button>
+              <div className="flex-1 flex items-center justify-center p-4 bg-muted rounded-lg border border-dashed">
+                <p className="text-sm text-muted-foreground text-center">
+                  Pass to access leaderboard
+                </p>
+              </div>
+            </>
         )}
+        </div>
       </div>
     </div>
   )

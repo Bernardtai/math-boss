@@ -17,6 +17,23 @@ export interface Level {
   order_index: number
   question_count: number
   unlock_requirements: any
+  mission_type?: 'escape' | 'hit' | 'collect' | 'race' | 'puzzle' | 'defend' | null
+  story_intro?: {
+    age_5_7?: string
+    age_8_10?: string
+    age_11_15?: string
+  } | null
+  story_failure_variants?: Array<{
+    age_5_7?: string
+    age_8_10?: string
+    age_11_15?: string
+    failure_type?: string
+  }> | null
+  boss_environment?: {
+    theme?: string
+    intensity?: number
+    visual_effects?: Record<string, any>
+  } | null
 }
 
 export interface UserProgress {
@@ -38,5 +55,38 @@ export interface UserUnlock {
   user_id: string
   level_id: string
   unlocked_at: string
+}
+
+export interface LeaderboardEntry {
+  rank: number
+  user_id: string
+  full_name: string | null
+  avatar_url: string | null
+  time_taken: number
+  questions_correct: number
+  questions_answered: number
+  accuracy: number // percentage
+  ranking_score: number // calculated score
+}
+
+export interface UserStoryState {
+  id: string
+  user_id: string
+  level_id: string
+  attempt_count: number
+  last_failure_type: string | null
+  story_context: Record<string, any>
+  created_at: string
+  updated_at: string
+}
+
+export interface AvatarCustomization {
+  skinColor?: string
+  hairStyle?: string
+  hairColor?: string
+  clothing?: string
+  accessories?: string[]
+  faceFeatures?: Record<string, any>
+  bodyType?: string
 }
 

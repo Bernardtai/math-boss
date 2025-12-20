@@ -2,6 +2,8 @@
  * Type definitions for profile-related data
  */
 
+import type { AvatarCustomization } from '@/lib/db/types'
+
 export interface Profile {
   id: string
   email: string
@@ -9,6 +11,8 @@ export interface Profile {
   country: string | null
   date_of_birth: string | null
   avatar_url: string | null
+  age: number | null
+  avatar_customization: AvatarCustomization | null
   created_at: string
   updated_at: string
 }

@@ -25,19 +25,16 @@ export async function getOrCreateProfile(
     .from('profiles')
     .select('*')
     .eq('id', userId)
-    .single()
+    .maybeSingle() // Use maybeSingle instead of single to avoid error on empty result
 
   // If profile exists, return it
-  if (existingProfile && !fetchError) {
+  if (existingProfile) {
     return existingProfile as Profile
   }
 
-  // Check if error is "not found" (PGRST116) or table doesn't exist (404/42P01/PGRST205)
-  // If it's a table missing error, the table doesn't exist - we can't proceed
+  // Check if error is a real error (not just "not found")
   if (fetchError) {
-    // PGRST205: Could not find the table in the schema cache
-    // 42P01: relation does not exist (PostgreSQL error)
-    // 404: HTTP not found
+    // Check if table is missing
     const isTableMissing = 
       fetchError.code === 'PGRST205' ||
       fetchError.code === '42P01' ||
@@ -48,24 +45,20 @@ export async function getOrCreateProfile(
     
     if (isTableMissing) {
       const errorMessage = 'The profiles table does not exist in your Supabase database. Please run the migration script: scripts/create-profiles-table.sql in your Supabase SQL Editor.'
-      // Log with less verbosity to reduce console noise
       console.warn('Profiles table missing - user will see helpful error message')
       throw new Error(errorMessage)
     }
     
-    // PGRST116 means "not found" - profile doesn't exist, we'll create it
-    if (fetchError.code !== 'PGRST116') {
-      console.error('Error fetching profile:', {
-        message: fetchError.message,
-        code: fetchError.code,
-        details: fetchError.details,
-        hint: fetchError.hint,
-      })
-      // Still try to create profile, might be a permission issue
-    }
+    // For other errors, log and continue to try creating
+    console.error('Error fetching profile:', {
+      message: fetchError.message,
+      code: fetchError.code,
+      details: fetchError.details,
+      hint: fetchError.hint,
+    })
   }
 
-  // Profile doesn't exist, create it
+  // Profile doesn't exist, try to create it
   const newProfile = {
     id: userId,
     email,
@@ -79,7 +72,7 @@ export async function getOrCreateProfile(
     .from('profiles')
     .insert(newProfile)
     .select()
-    .single()
+    .maybeSingle() // Use maybeSingle for consistency
 
   if (createError) {
     // Check if table is missing
@@ -93,30 +86,34 @@ export async function getOrCreateProfile(
     
     if (isTableMissing) {
       const errorMessage = 'The profiles table does not exist in your Supabase database. Please run the migration script: scripts/create-profiles-table.sql in your Supabase SQL Editor.'
-      // Log with less verbosity to reduce console noise
       console.warn('Profiles table missing - user will see helpful error message')
       throw new Error(errorMessage)
     }
     
-    console.error('Error creating profile:', {
-      message: createError?.message || 'Unknown error',
-      code: createError?.code || 'Unknown code',
-      details: createError?.details || 'No details',
-      hint: createError?.hint || 'No hint',
-      fullError: createError || 'No error object',
-    })
-    
-    // If it's a unique constraint violation, try to fetch again
+    // If it's a unique constraint violation (profile already exists), try to fetch again
     if (createError.code === '23505') {
-      const { data: retryProfile } = await supabase
+      console.log('Profile already exists, fetching existing profile...')
+      const { data: retryProfile, error: retryError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single()
+        .maybeSingle()
       
       if (retryProfile) {
         return retryProfile as Profile
       }
+      
+      if (retryError) {
+        console.error('Error fetching profile after duplicate key:', retryError)
+      }
+    } else {
+      // Log other creation errors
+      console.error('Error creating profile:', {
+        message: createError?.message || 'Unknown error',
+        code: createError?.code || 'Unknown code',
+        details: createError?.details || 'No details',
+        hint: createError?.hint || 'No hint',
+      })
     }
     
     return null

@@ -31,6 +31,11 @@ export async function updateSession(request: NextRequest) {
             name,
             value,
             ...options,
+            path: '/',
+            maxAge: 60 * 60 * 24 * 365, // 1 year
+            sameSite: 'lax',
+            secure: process.env.NODE_ENV === 'production',
+            httpOnly: true,
           })
         },
         remove(name: string, options: any) {
@@ -48,6 +53,11 @@ export async function updateSession(request: NextRequest) {
             name,
             value: '',
             ...options,
+            path: '/',
+            maxAge: 0,
+            sameSite: 'lax',
+            secure: process.env.NODE_ENV === 'production',
+            httpOnly: true,
           })
         },
       },
@@ -62,13 +72,18 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (
-    !user &&
-    !request.nextUrl.pathname.startsWith('/login') &&
-    !request.nextUrl.pathname.startsWith('/auth') &&
-    request.nextUrl.pathname !== '/'
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
+  // Public routes that don't require authentication
+  const publicRoutes = [
+    '/',
+    '/login',
+  ]
+  
+  const isPublicRoute = publicRoutes.includes(request.nextUrl.pathname) ||
+    request.nextUrl.pathname.startsWith('/auth') ||
+    request.nextUrl.pathname.startsWith('/api/auth')
+
+  if (!user && !isPublicRoute) {
+    // No user and not a public route - redirect to login
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)

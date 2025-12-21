@@ -40,21 +40,25 @@ const navigation = [
     name: 'Home',
     href: '/',
     icon: Home,
+    public: true, // Always visible
   },
   {
     name: 'Lessons',
     href: '/lessons',
     icon: BookOpen,
+    public: false, // Only visible when authenticated
   },
   {
     name: 'Leaderboard',
     href: '/leaderboard',
     icon: Trophy,
+    public: false, // Only visible when authenticated
   },
   {
     name: 'Profile',
     href: '/profile',
     icon: UserIcon,
+    public: false, // Only visible when authenticated
   },
 ]
 
@@ -140,25 +144,27 @@ export function Header() {
 
           {/* Middle: Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-1">
-            {navigation.map((item) => {
-              const isActive = pathname === item.href ||
-                              (item.href !== '/' && pathname.startsWith(item.href))
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={cn(
-                    'flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors',
-                    isActive
-                      ? 'bg-primary/10 text-primary'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                  )}
-                >
-                  <item.icon className="h-4 w-4" />
-                  {item.name}
-                </Link>
-              )
-            })}
+            {navigation
+              .filter(item => item.public || user) // Show only public items or all items if authenticated
+              .map((item) => {
+                const isActive = pathname === item.href ||
+                                (item.href !== '/' && pathname.startsWith(item.href))
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={cn(
+                      'flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors',
+                      isActive
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                    )}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    {item.name}
+                  </Link>
+                )
+              })}
           </nav>
 
           {/* Right: Theme Toggle + User Profile/Login */}
@@ -266,26 +272,28 @@ export function Header() {
 
                   {/* Mobile Navigation Links */}
                   <nav className="flex flex-col gap-2">
-                    {navigation.map((item) => {
-                      const isActive = pathname === item.href ||
-                                      (item.href !== '/' && pathname.startsWith(item.href))
-                      return (
-                        <Link
-                          key={item.name}
-                          href={item.href}
-                          onClick={() => setMobileMenuOpen(false)}
-                          className={cn(
-                            'flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors',
-                            isActive
-                              ? 'bg-primary/10 text-primary border-l-4 border-primary'
-                              : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                          )}
-                        >
-                          <item.icon className="h-5 w-5" />
-                          {item.name}
-                        </Link>
-                      )
-                    })}
+                    {navigation
+                      .filter(item => item.public || user) // Show only public items or all items if authenticated
+                      .map((item) => {
+                        const isActive = pathname === item.href ||
+                                        (item.href !== '/' && pathname.startsWith(item.href))
+                        return (
+                          <Link
+                            key={item.name}
+                            href={item.href}
+                            onClick={() => setMobileMenuOpen(false)}
+                            className={cn(
+                              'flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors',
+                              isActive
+                                ? 'bg-primary/10 text-primary border-l-4 border-primary'
+                                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                            )}
+                          >
+                            <item.icon className="h-5 w-5" />
+                            {item.name}
+                          </Link>
+                        )
+                      })}
                   </nav>
 
                   {/* Mobile Auth Actions */}
